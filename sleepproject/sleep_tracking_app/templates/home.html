@@ -1,0 +1,73 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+
+    <title>{% block title %}Сон и здоровье{% endblock %}</title>
+    <link rel="icon" href="{% static 'logo.png' %}" type="image/png">
+
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+     <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            min-height: calc(100% - 56px);
+        }
+
+    </style>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    {% block scripts %}
+
+    {% endblock %}
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <a class="navbar-brand" href="{% url 'home' %}" style="font-size: 25px;">Сон и здоровье</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav ml-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'profile' %}" style="font-size: 20px;">{{ request.user.username }}</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'sleep_statistics_show' %}" style="font-size: 20px;">Статистика сна</a>
+                </li>
+                 <li class="nav-item">
+                    <a class="nav-link" href="{% url 'add_users_sleep_data' %}" style="font-size: 20px;">Добавить данные о сне</a>
+                </li>
+                 <li class="nav-item">
+                    <a class="nav-link" href="{% url 'logout' %}?next={% url 'login' %}" style="font-size: 20px;">Выйти</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+    <div class="container mt-5">
+        {% block content %}
+        <h1>Добро пожаловать!</h1>
+            <div style="font-size: 20px; margin-top: 20px; text-indent: 20px;">Здоровый сон играет важную роль в общем здоровье и благополучии. Приложение помогает пользователям следить за своими сновидениями и обнаруживать любые отклонения или проблемы со сном.</div>
+            <div style="font-size: 20px; margin-top: 20px; text-indent: 20px;"> Использование приложения для отслеживания сна может способствовать повышению осведомленности о важности здорового сна и его влиянии на общее самочувствие. Это может стимулировать пользователей принимать более осознанные решения о своем сне и улучшении его качества.</div>
+        {% endblock %}
+    </div>
+
+    <footer class="footer mt-auto py-3 bg-dark text-white">
+      <div class="container text-center">
+        <span>&copy; GoodSleepPro Company {% now "Y" %} Сон и здоровье</span>
+      </div>
+    </footer>
+</body>
+
+
+</html>
+

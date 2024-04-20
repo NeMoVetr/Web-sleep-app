@@ -1,0 +1,35 @@
+{% extends 'home.html' %}
+
+{% block title %}
+Профиль
+{% endblock %}
+
+{% block content %}
+<div class="container mt-10">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">Профиль</div>
+                <div class="card-body">
+                    <h5 class="card-title">Информация о пользователе</h5>
+                    <p class="card-text">Ник: {{ user.username }}</p>
+                    <p class="card-text">Имя: {{ user.first_name }}</p>
+                    <p class="card-text">Фамилия: {{ user.last_name }}</p>
+                    <p class="card-text">Email: {{ user.email }}</p>
+                    <p class="card-text">Дата рождения: {{ user_data.date_of_birth |date:"d F Y" }}</p>
+                    <p class="card-text">Вес: {{ user_data.weight }} кг</p>
+                    <p class="card-text">Пол: {{ user_data.gender }}</p>
+                    <p class="card-text">Рост: {{ user_data.height }} см</p>
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="activeCheckbox" {% if user_data.active %} checked {% endif %} disabled>
+                        <label class="form-check-label" for="activeCheckbox">Рассылка</label>
+                    </div>
+                    <a href="{% url 'user_update' %}" class="btn btn-primary">Редактировать</a>
+                    <a href="{% url 'logout' %}?next={% url 'login' %}" class="btn btn-primary">Выйти</a>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -15,6 +15,7 @@ urlpatterns = [
     path('sleep-statistics-show/', sleep_statistics_show, name='sleep_statistics_show'),
     path('register/', register, name='register'),
 
+
     path('custom-password-reset-confirm/<uidb64>/<token>/', CustomPasswordResetConfirmView.as_view(),
          name='custom_password_reset_confirm'),
     path('custom-password-reset-done/', CustomPasswordResetDoneView.as_view(), name='custom_password_reset_done'),

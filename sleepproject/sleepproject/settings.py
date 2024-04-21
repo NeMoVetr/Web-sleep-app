@@ -38,11 +38,13 @@ INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
+    'django_password_eye',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'sleep_tracking_app',
 ]
+DJANGO_PASSWORD_EYE_INCLUDE_FONT_AWESOME = False
 
 SITE_ID = 1
 

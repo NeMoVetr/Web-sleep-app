@@ -2,6 +2,7 @@ import json
 from datetime import datetime
 
 import pandas as pd
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import PasswordResetConfirmView, PasswordResetCompleteView, PasswordResetView
 from django.core.exceptions import ObjectDoesNotExist
@@ -47,10 +48,18 @@ def add_users_sleep_data(request):
     if request.method == 'POST':
         form = SleepRecordForm(request.POST)
         if form.is_valid():
-            sleep_data = form.save(commit=False)
-            sleep_data.user = user
-            sleep_data.save()
-            return redirect('sleep_statistics_show')
+            deep_sleep_duration = form.cleaned_data['deep_sleep_duration']
+            fast_sleep_duration = form.cleaned_data['fast_sleep_duration']
+            total_time_bed = form.cleaned_data['total_time_bed']
+            if (deep_sleep_duration + fast_sleep_duration) <= total_time_bed:
+                sleep_data = form.save(commit=False)
+                sleep_data.user = user
+                sleep_data.save()
+                return redirect('sleep_statistics_show')
+            else:
+                messages.warning(request,
+                                 'Сумма глубокого и быстрого сна должна быть меньше или равна общему времени в кровати.')
+                return redirect('add_users_sleep_data')
     else:
         form = SleepRecordForm()
         sleep_data = None
@@ -104,18 +113,25 @@ def sleep_record_update(request):
     user = request.user
     user_data = UserData.objects.get(user=user)
     if request.method == 'POST':
-        form = UpdateSleepRecordForm(request.POST)
+        form = UpdateSleepRecordForm(user, request.POST)
         if form.is_valid():
             selected_date = form.cleaned_data['data_sleep']
-            sleep_record = SleepRecord.objects.filter(user=user, sleep_time=selected_date).first()
-            form = UpdateSleepRecordForm(request.POST, instance=sleep_record)
-            calculate_sleep_statistics(user=user, user_data=user_data, update=selected_date)
-            if form.is_valid():
-                form.save()
-
-                return redirect('sleep_statistics_show')
+            deep_sleep_duration = form.cleaned_data['deep_sleep_duration']
+            fast_sleep_duration = form.cleaned_data['fast_sleep_duration']
+            total_time_bed = form.cleaned_data['total_time_bed']
+            if (deep_sleep_duration + fast_sleep_duration) <= total_time_bed:
+                sleep_record = SleepRecord.objects.filter(user=user, sleep_time=selected_date).first()
+                form = UpdateSleepRecordForm(user, request.POST, instance=sleep_record)
+                if form.is_valid():
+                    form.save()
+                    calculate_sleep_statistics(user=user, user_data=user_data, update=selected_date)
+                    return redirect('sleep_statistics_show')
+            else:
+                messages.warning(request,
+                                 'Сумма глубокого и быстрого сна должна быть меньше или равна общему времени в кровати.')
+                return redirect('sleep_record_update')
     else:
-        form = UpdateSleepRecordForm()
+        form = UpdateSleepRecordForm(user)
 
     return render(request, 'update_sleep_record.html', {'form': form})
 
@@ -135,8 +151,7 @@ def sleep_statistics_show(request):
 
     today = datetime.now().date()
 
-    if not sleep_statistics_set.filter(date=today).exists() and sleep_record_set.filter(
-            sleep_time=today):
+    if not sleep_statistics_set.filter(date=today).exists() and sleep_record_set.filter(sleep_time=today).exists():
         calculate_sleep_statistics(user=user, user_data=user_data)
 
     data_sleep_statistics = {
@@ -188,43 +203,40 @@ def sleep_statistics_show(request):
 
 
 def calculate_sleep_statistics(user, user_data, update=None):
-    try:
-        # Получаем данные за выбранную дату, если она была передана
-        if update:
-            sleep_data = SleepRecord.objects.get(user=user, sleep_time=update)
-        else:
-            # Пытаемся получить последнюю запись SleepRecord для данного пользователя
-            sleep_data = SleepRecord.objects.filter(user=user).latest('sleep_time')
+    # Получаем данные за выбранную дату, если она была передана
+    if update:
+        sleep_data = SleepRecord.objects.get(user=user, sleep_time=update)
+    else:
+        # Пытаемся получить последнюю запись SleepRecord для данного пользователя
+        sleep_data = SleepRecord.objects.filter(user=user).latest('sleep_time')
 
-        # Общее время сна за последнюю ночь
-        sleep_duration = sleep_data.deep_sleep_duration + sleep_data.fast_sleep_duration
-        sleep_quality = round((sleep_duration / sleep_data.total_time_bed) * 100, 1)
-        date_current = datetime.now()
-        age = float((date_current.year - user_data.date_of_birth.year) * 12 + (
-                date_current.month - user_data.date_of_birth.month))
+    # Общее время сна за последнюю ночь
+    sleep_duration = sleep_data.deep_sleep_duration + sleep_data.fast_sleep_duration
+    sleep_quality = round((sleep_duration / sleep_data.total_time_bed) * 100, 1)
+    date_current = datetime.now()
+    age = float((date_current.year - user_data.date_of_birth.year) * 12 + (
+            date_current.month - user_data.date_of_birth.month))
 
-        health_impact = f"Рекомендуемое время сна: {evaluate_health_impact(age)} часов для вашего возраста"
-        calories_burned = calculate_calories_burned(user_data=user_data, age=age, sleep_duration=sleep_duration)
+    health_impact = f"Рекомендуемое время сна: {evaluate_health_impact(age)} часов для вашего возраста"
+    calories_burned = calculate_calories_burned(user_data=user_data, age=age, sleep_duration=sleep_duration)
 
-        # Создаем запись в модели SleepStatistics
-        if not update:
-            SleepStatistics.objects.create(
-                user=user,
-                sleep_duration=sleep_duration,
-                sleep_quality=sleep_quality,
-                health_impact=health_impact,
-                calories_burned=calories_burned,
-            )
-        else:
-            statistics_entry = SleepStatistics.objects.get(user=user, date=update)
-            statistics_entry.sleep_duration = sleep_duration
-            statistics_entry.sleep_quality = sleep_quality
-            statistics_entry.health_impact = health_impact
-            statistics_entry.calories_burned = calories_burned
-            statistics_entry.save()
+    # Создаем запись в модели SleepStatistics
+    if not update:
+        SleepStatistics.objects.create(
+            user=user,
+            sleep_duration=sleep_duration,
+            sleep_quality=sleep_quality,
+            health_impact=health_impact,
+            calories_burned=calories_burned,
+        )
+    else:
+        statistics_entry = SleepStatistics.objects.get(user=user, date=update)
+        statistics_entry.sleep_duration = sleep_duration
+        statistics_entry.sleep_quality = sleep_quality
+        statistics_entry.health_impact = health_impact
+        statistics_entry.calories_burned = calories_burned
+        statistics_entry.save()
 
-    except ObjectDoesNotExist:
-        pass
 
 
 def evaluate_health_impact(age):
@@ -341,7 +353,5 @@ class CustomPasswordResetConfirmView(PasswordResetConfirmView):
 
 class CustomPasswordResetCompleteView(PasswordResetCompleteView):
     template_name = 'system/password_reset_complete.html'
-
-
 
 # taskkill /F /IM celery.exe

@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 
+
 from .models import SleepRecord, UserData, User
 
 
@@ -33,7 +34,7 @@ class UserRegistrationForm(UserCreationForm):
         model = User
         fields = ['username', 'first_name', 'last_name', 'email', 'password1', 'password2']
         labels = {
-            'username': 'Ник',
+            'username': 'Никнейм',
             'first_name': 'Имя',
             'last_name': 'Фамилия',
             'password1': 'Пароль',
@@ -79,6 +80,12 @@ class SleepRecordForm(forms.ModelForm):
 
 
 class UpdateSleepRecordForm(forms.ModelForm):
+    def __init__(self, user, *args, **kwargs):
+        super(UpdateSleepRecordForm, self).__init__(*args, **kwargs)
+        # Filter the queryset based on the user input
+        self.fields['data_sleep'].queryset = SleepRecord.objects.filter(user=user).values_list('sleep_time',
+                                                                                               flat=True).distinct()
+
     data_sleep = forms.ModelChoiceField(queryset=SleepRecord.objects.values_list('sleep_time', flat=True).distinct(),
                                         label='Дата:', to_field_name='sleep_time')
     deep_sleep_duration = forms.FloatField(label='Продолжительность глубокой фазы сна:',
@@ -88,12 +95,11 @@ class UpdateSleepRecordForm(forms.ModelForm):
     total_time_bed = forms.FloatField(label='Общее время, проведённое в кровати:',
                                       widget=forms.TextInput(attrs={'placeholder': 'Введите число в часах'}))
 
-
-class Meta:
-    model = SleepRecord
-    fields = ['data_sleep', 'deep_sleep_duration', 'fast_sleep_duration', 'total_time_bed']
-    labels = {
-        'deep_sleep_duration': 'Продолжительность глубокой фазы сна:',
-        'fast_sleep_duration': 'Продолжительность лёгкой фазы сна:',
-        'total_time_bed': 'Общее время, проведённое в кровати:',
-    }
+    class Meta:
+        model = SleepRecord
+        fields = ['data_sleep', 'deep_sleep_duration', 'fast_sleep_duration', 'total_time_bed']
+        labels = {
+            'deep_sleep_duration': 'Продолжительность глубокой фазы сна:',
+            'fast_sleep_duration': 'Продолжительность лёгкой фазы сна:',
+            'total_time_bed': 'Общее время, проведённое в кровати:',
+        }

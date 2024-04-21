@@ -14,6 +14,13 @@
                     {% if sleep_data_exists == True %}
                     <p class="alert alert-warning">Данные о сне сегодня уже добавлены!</p>
                     {% else %}
+                    {% if messages %}
+                    <div class="alert alert-warning">
+                        {% for message in messages %}
+                        {{ message }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
                     <form method="post">
                         {% csrf_token %}
                         {{ form.as_p }}

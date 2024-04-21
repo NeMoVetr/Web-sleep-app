@@ -12,12 +12,13 @@
                         <form method="post">
                             {% csrf_token %}
                             <div class="form-group">
-                                <label for="id_username">Ник:</label>
+                                <label for="id_username">Никнейм:</label>
                                 <input type="text" name="username" id="id_username" class="form-control">
                             </div>
                             <div class="form-group">
-                                <label for="id_password">Password:</label>
+                                <label for="id_password">Пароль:</label>
                                 <input type="password" name="password" id="id_password" class="form-control">
+
                             </div>
                             <button type="submit" class="btn btn-primary">Войти</button>
                             <p class="mt-3">У вас нет учетной записи? <a href="{% url 'register' %}">Зарегистрироваться</a></p>

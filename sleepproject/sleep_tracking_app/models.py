@@ -25,13 +25,6 @@ class SleepRecord(models.Model):
                                          validators=[MinValueValidator(0), MaxValueValidator(24)])
 
 
-class Reminder(models.Model):
-    user = models.ForeignKey(UserData, on_delete=models.CASCADE)
-    date = models.DateTimeField(auto_now_add=True)
-    reminder_text = models.TextField(
-        'Уважаемый пользователь,\n\nМы надеемся, что наш сервис помогает вам лучше понять своё состояние сна. Чтобы обеспечить максимальную эффективность и точность данных, мы хотели бы напомнить вам о важности регулярного обновления информации в приложении.\n\nПожалуйста, не забывайте вносить данные о вашем сне ежедневно. Это поможет нам предоставить вам наиболее точные и полезные аналитические данные о вашем сне, что, в свою очередь, поможет вам лучше понять его влияние на ваше здоровье.\n\nМы ценим ваше участие в нашем проекте.\n\nС уважением,\nКоманда GoodSleepPro.')
-
-
 class SleepStatistics(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     sleep_duration = models.FloatField()  # deep_sleep_duration + fast_sleep_duration

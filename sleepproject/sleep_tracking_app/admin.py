@@ -1,7 +1,7 @@
 from django.contrib import admin
 
 
-from .models import SleepRecord, Reminder, SleepStatistics, UserData
+from .models import SleepRecord, SleepStatistics, UserData
 
 
 # Register your models here.
@@ -21,18 +21,6 @@ class SleepRecordAdmin(admin.ModelAdmin):
         return obj.user.username
 
 
-class ReminderAdmin(admin.ModelAdmin):
-    list_display = ['user_name', 'date', 'active_mailing']
-    list_filter = ['user', 'date']
-    search_fields = ['user', 'date', 'reminder_text']
-
-    def user_name(self, obj):
-        return obj.user.username
-
-    def active_mailing(self, obj):
-        return obj.user.active
-
-
 class SleepStatisticsAdmin(admin.ModelAdmin):
     list_display = ['user_name', 'sleep_duration', 'sleep_quality', 'health_impact', 'date', 'calories_burned']
     list_filter = ['user', 'sleep_duration', 'sleep_quality']
@@ -48,5 +36,4 @@ class SleepStatisticsAdmin(admin.ModelAdmin):
 
 admin.site.register(UserData, UserDataAdmin)
 admin.site.register(SleepRecord, SleepRecordAdmin)
-admin.site.register(Reminder, ReminderAdmin)
 admin.site.register(SleepStatistics, SleepStatisticsAdmin)

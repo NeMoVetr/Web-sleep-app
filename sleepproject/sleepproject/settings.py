@@ -13,6 +13,10 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 from pathlib import Path
 
 from django.urls import reverse_lazy
+from dotenv import load_dotenv, find_dotenv
+import os
+
+load_dotenv(find_dotenv())
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -21,7 +25,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-i9tb^dtocrkak$q(aw(i5je%9accm@lldyy4-m2c3y_q-k77df'
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -29,6 +33,7 @@ DEBUG = True
 ALLOWED_HOSTS = [
     '127.0.0.1',
     '192.168.1.47',
+    'localhost',
 ]
 
 # Application definition
@@ -38,13 +43,13 @@ INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
-    'django_password_eye',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'celery_progress',
+    'dragndrop_related',
     'sleep_tracking_app',
 ]
-DJANGO_PASSWORD_EYE_INCLUDE_FONT_AWESOME = False
 
 SITE_ID = 1
 
@@ -81,10 +86,22 @@ WSGI_APPLICATION = 'sleepproject.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-DATABASES = {
+"""DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
+    }
+}
+"""
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': os.getenv("BD_NAME"),
+        'USER': os.getenv("BD_USER"),
+        'PASSWORD': os.getenv("BD_PASSWORD"),
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
 
@@ -120,33 +137,36 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, "sleep_tracking_app", "static"),
+]
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-
 # EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
 EMAIL_HOST = 'smtp.msndr.net'
 EMAIL_PORT = 465
-EMAIL_HOST_USER = 'goodsleeppro@yandex.ru'
-EMAIL_HOST_PASSWORD = '42b804cff3ede89df9d69c92e4db388c'
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 EMAIL_USE_SSL = True
-
 
 SERVER_EMAIL = EMAIL_HOST_USER
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 EMAIL_ADMIN = EMAIL_HOST_USER
 
-CELERY_BROKER_URL = 'redis://127.0.0.1:6379/0'  # URL Redis для хранения очереди задач
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL")  # URL Redis для хранения очереди задач
 
-CELERY_RESULT_BACKEND = 'redis://127.0.0.1:6379/0'
+CELERY_RESULT_BACKEND = os.getenv("CELERY_BROKER_URL")
 CELERY_TIMEZONE = 'UTC'  # Установка часового пояса
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 
 LOGIN_REDIRECT_URL = reverse_lazy('home')
-

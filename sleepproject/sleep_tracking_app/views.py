@@ -1,28 +1,41 @@
 import json
-from datetime import datetime
-
+from datetime import timedelta
+import os
 import pandas as pd
+
 from django.contrib import messages
+from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import PasswordResetConfirmView, PasswordResetCompleteView, PasswordResetView
+from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import render, redirect
 from django.urls import reverse_lazy
 from django.views.generic import TemplateView
+from django.utils import timezone
+from django.core.files.storage import FileSystemStorage
 
+from .tasks import import_sleep_records
+from sleepproject.settings import MEDIA_ROOT
 from .calculations import calculate_sleep_statistics, plot_sleep_histograms, plot_sleep_duration_sleep_quality, \
     plot_sleep_quality, plot_sleep_deep_fast
-from .forms import SleepRecordForm, UserRegistrationForm, UserDataForm, UserInfoUpdateForm, UpdateSleepRecordForm
+
+from .forms import SleepRecordForm, UserRegistrationForm, UserDataForm, UserInfoUpdateForm, UpdateSleepRecordForm, \
+    CSVImportForm
 from .models import SleepRecord, SleepStatistics, UserData
 
-
 # Create your views here.
-def home(request):
+# python-benedict
+
+today = timezone.now()
+
+
+def home(request: HttpRequest) -> HttpResponse:
     if not request.user.is_authenticated:
         return redirect('login')
     return render(request, 'home.html')
 
 
-def register(request):
+def register(request: HttpRequest) -> HttpResponse:
     if request.method == 'POST':
         user_form = UserRegistrationForm(request.POST)
         user_data_form = UserDataForm(request.POST)
@@ -39,22 +52,29 @@ def register(request):
 
 
 @login_required
-def add_users_sleep_data(request):
+def custom_logout(request: HttpRequest) -> HttpResponse:
+    # Выход из текущей учетной записи
+    logout(request)
+    # Перенаправление на главную страницу
+    return redirect('home')
+
+
+@login_required
+def add_users_sleep_data(request: HttpRequest) -> HttpResponse:
     user = request.user
 
-    today = datetime.now().date()
-
-    sleep_data_exists = SleepRecord.objects.filter(user=user, sleep_time=today).exists()
+    sleep_data_exists = SleepRecord.objects.filter(user=user, sleep_date_time=today).exists()
 
     if request.method == 'POST':
         form = SleepRecordForm(request.POST)
         if form.is_valid():
-            deep_sleep_duration = form.cleaned_data['deep_sleep_duration']
-            fast_sleep_duration = form.cleaned_data['fast_sleep_duration']
+            sleep_deep_duration = form.cleaned_data['sleep_deep_duration']
+            sleep_light_duration = form.cleaned_data['sleep_light_duration']
             total_time_bed = form.cleaned_data['total_time_bed']
-            if (deep_sleep_duration + fast_sleep_duration) <= total_time_bed:
+            if (sleep_deep_duration + sleep_light_duration) <= total_time_bed:
                 sleep_data = form.save(commit=False)
                 sleep_data.user = user
+                sleep_data.sleep_date_time = today
                 sleep_data.save()
                 return redirect('sleep_statistics_show')
             else:
@@ -63,14 +83,13 @@ def add_users_sleep_data(request):
                 return redirect('add_users_sleep_data')
     else:
         form = SleepRecordForm()
-        sleep_data = None
 
     return render(request, 'add_users_sleep_data.html',
-                  {'form': form, 'sleep_data': sleep_data, 'sleep_data_exists': sleep_data_exists})
+                  {'form': form, 'sleep_data_exists': sleep_data_exists})
 
 
 @login_required
-def user_update(request):
+def user_update(request: HttpRequest) -> HttpResponse:
     user = request.user
     try:
         user_data = UserData.objects.get(user=user)
@@ -99,7 +118,7 @@ def user_update(request):
 
 
 @login_required
-def profile(request):
+def profile(request: HttpRequest) -> HttpResponse:
     user = request.user
     user_data = UserData.objects.get(user=user)
     context = {
@@ -110,17 +129,17 @@ def profile(request):
 
 
 @login_required
-def sleep_record_update(request):
+def sleep_record_update(request: HttpRequest) -> HttpResponse:
     user = request.user
     user_data = UserData.objects.get(user=user)
     if request.method == 'POST':
         form = UpdateSleepRecordForm(user, request.POST)
         if form.is_valid():
             selected_date = form.cleaned_data['data_sleep']
-            deep_sleep_duration = form.cleaned_data['deep_sleep_duration']
-            fast_sleep_duration = form.cleaned_data['fast_sleep_duration']
+            sleep_deep_duration = form.cleaned_data['sleep_deep_duration']
+            sleep_light_duration = form.cleaned_data['sleep_light_duration']
             total_time_bed = form.cleaned_data['total_time_bed']
-            if (deep_sleep_duration + fast_sleep_duration) <= total_time_bed:
+            if (sleep_deep_duration + sleep_light_duration) <= total_time_bed:
                 sleep_record = SleepRecord.objects.filter(user=user, sleep_time=selected_date).first()
                 form = UpdateSleepRecordForm(user, request.POST, instance=sleep_record)
                 if form.is_valid():
@@ -138,26 +157,49 @@ def sleep_record_update(request):
 
 
 @login_required
-def sleep_statistics_show(request):
+def sleep_records_from_csv(request: HttpRequest) -> HttpResponse:
+    if request.method == 'POST':
+        csv_file = request.FILES['csv_file']
+        fs = FileSystemStorage(location=os.path.join(MEDIA_ROOT, 'tmp'))
+        filename = fs.save(csv_file.name, csv_file)
+        tmp_path = fs.path(filename)
+
+        # запускаем Celery‑таску
+        task = import_sleep_records.delay(request.user.id, tmp_path)
+
+
+        return JsonResponse({'task_id': task.id})
+
+
+
+    return render(request, 'sleep_records_from_csv.html', {'form': CSVImportForm()})
+
+
+
+
+@login_required
+def sleep_statistics_show(request: HttpRequest) -> HttpResponse:
     user = request.user
 
     user_data = UserData.objects.get(user=user)
 
-    sleep_statistics_set = SleepStatistics.objects.filter(user=user)
-    sleep_record_set = SleepRecord.objects.filter(user=user)
+    # Получаем статистику сна и записи сна за последние 10 дней
+    sleep_statistics_set = SleepStatistics.objects.filter(user=user, date__gte=today - timedelta(days=10))
+    sleep_record_set = SleepRecord.objects.filter(user=user, date__gte=today - timedelta(days=10))
 
     if not sleep_record_set.exists() and not sleep_statistics_set.exists():
         context = {'html_table_sleep_statistics': None, 'html_table_sleep_record': None}
         return render(request, 'sleep_statistics_show.html', context)
 
-    today = datetime.now().date()
-
     if not sleep_statistics_set.filter(date=today).exists() and sleep_record_set.filter(sleep_time=today).exists():
         calculate_sleep_statistics(user=user, user_data=user_data)
+        sleep_statistics_set = SleepStatistics.objects.filter(user=user, date__gte=today - timedelta(days=10))
+        sleep_record_set = SleepRecord.objects.filter(user=user, date__gte=today - timedelta(days=10))
 
     data_sleep_statistics = {
         'Дата': [sleep_statistic.date for sleep_statistic in sleep_statistics_set],
-        'Продолжительность сна (часы)': [sleep_statistic.sleep_duration for sleep_statistic in sleep_statistics_set],
+        'Продолжительность сна (часы)': [round(sleep_statistic.sleep_duration / 60, 2) for sleep_statistic in
+                                         sleep_statistics_set],
         'Качество сна (%)': [sleep_statistic.sleep_quality for sleep_statistic in sleep_statistics_set],
         'Сожженные калории во время сна (кк)': [sleep_statistic.calories_burned for sleep_statistic in
                                                 sleep_statistics_set],
@@ -165,20 +207,20 @@ def sleep_statistics_show(request):
     recommended_sleep = sleep_statistics_set.latest('date').health_impact
 
     data_sleep_record = {
-        'Дата': [record.sleep_time for record in sleep_record_set],
+        'Дата': [sleep_record.sleep_date_time for sleep_record in sleep_record_set],
 
-        'Продолжительность глубокого сна (часы)': [sleep_record.deep_sleep_duration for sleep_record in
+        'Продолжительность глубокого сна (часы)': [round(sleep_record.sleep_deep_duration / 60, 2) for sleep_record in
                                                    sleep_record_set],
-        'Продолжительность лёгкого сна (часы)': [sleep_record.fast_sleep_duration for sleep_record in sleep_record_set],
+        'Продолжительность лёгкого сна (часы)': [round(sleep_record.sleep_light_duration / 60, 2) for sleep_record in
+                                                 sleep_record_set],
     }
 
     df_sleep_statistics = pd.DataFrame(data_sleep_statistics)
-    df_sleep_statistics = pd.concat([df_sleep_statistics.tail(10)])
+
     html_table_sleep_statistics = df_sleep_statistics.to_html(
         classes=["table-bordered", "table-striped", "table-hover"], index=False)
 
     df_sleep_record = pd.DataFrame(data_sleep_record)
-    df_sleep_record = pd.concat([df_sleep_record.tail(10)])
 
     html_table_sleep_record = df_sleep_record.to_html(classes=["table-bordered", "table-striped", "table-hover"],
                                                       index=False)

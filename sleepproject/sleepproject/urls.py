@@ -20,5 +20,6 @@ from django.urls import path, include
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('sleep_tracking_app.urls')),
+    path('celery-progress/', include('celery_progress.urls')),
     path('accounts/', include("django.contrib.auth.urls")),
 ]

@@ -13,9 +13,9 @@ class UserDataAdmin(admin.ModelAdmin):
 
 
 class SleepRecordAdmin(admin.ModelAdmin):
-    list_display = ['user_name', 'sleep_time', 'deep_sleep_duration', 'fast_sleep_duration']
+    list_display = ['user_name', 'sleep_date_time', 'sleep_deep_duration', 'sleep_light_duration']
     list_filter = ['user']
-    search_fields = ['user', 'sleep_time', 'deep_sleep_duration', 'fast_sleep_duration']
+    search_fields = ['user', 'sleep_date_time', 'sleep_deep_duration', 'sleep_light_duration']
 
     def user_name(self, obj):
         return obj.user.username

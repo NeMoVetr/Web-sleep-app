@@ -1,0 +1,14 @@
+https://rrsociology.ru/media/medicine/2022/2/Биомедицинские_исследования_июнь_2022-102-113.pdf
+https://www.calculatorultra.com/ru/tool/sleep-calories-calculator.html#gsc.tab=0
+Аналоги: https://elitehrv.com
+
+https://welltory.com/
+
+
+Хранение бд в https://msk.cloud.vk.com/app/mcs5667516136/main?service=storage%3Futm_source%3Dyandex.direct.DL&utm_medium=cpc&utm_campaign=y_storage_search_general_rf_62716505&utm_content=17065368255&utm_term=amazon%20s3&yclid=8143759458373730303
+Необходимо закинуть на S3
+
+запуск celery:
+docker run -d -p 6381:6379 redis
+
+celery -A sleepproject worker -l info -P solo

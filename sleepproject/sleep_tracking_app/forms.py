@@ -1,20 +1,20 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
-
-
+from datetime import datetime
 from .models import SleepRecord, UserData, User
+from dragndrop_related.views import DragAndDropView
 
 
 class UserDataForm(forms.ModelForm):
     GENDER_CHOICES = (
-        ('Мужской', 'Мужской'),
-        ('Женский', 'Женский'),
+        (1, 'Мужской'),
+        (0, 'Женский'),
     )
     date_of_birth = forms.DateField(required=True, label='Дата рождения',
-                                    widget=forms.DateInput(attrs={'type': 'date'}))
+                                    widget=forms.DateInput(attrs={'type': 'date', 'max': datetime.now().date()}))
     weight = forms.IntegerField(min_value=10, required=True, label='Вес',
                                 widget=forms.TextInput(attrs={'placeholder': 'Введите ваш вес (кг)'}))
-    gender = forms.CharField(label='Пол', widget=forms.Select(choices=GENDER_CHOICES))
+    gender = forms.TypedChoiceField(label='Пол', coerce=int, choices=GENDER_CHOICES)
     height = forms.IntegerField(min_value=10, required=True, label='Рост',
                                 widget=forms.TextInput(attrs={'placeholder': 'Введите ваш рост (см)'}))
     active = forms.BooleanField(label='Подписаться на рассылку', required=False)
@@ -62,19 +62,19 @@ class UserInfoUpdateForm(forms.ModelForm):
 
 
 class SleepRecordForm(forms.ModelForm):
-    deep_sleep_duration = forms.FloatField(label='Продолжительность глубокой фазы сна:',
-                                           widget=forms.TextInput(attrs={'placeholder': 'Введите число в часах'}))
-    fast_sleep_duration = forms.FloatField(label='Продолжительность лёгкой фазы сна:',
-                                           widget=forms.TextInput(attrs={'placeholder': 'Введите число в часах'}))
-    total_time_bed = forms.FloatField(label='Общее время, проведённое в кровати:',
-                                      widget=forms.TextInput(attrs={'placeholder': 'Введите число в часах'}))
+    sleep_deep_duration = forms.IntegerField(label='Общая продолжительность глубокой фазы сна:',
+                                             widget=forms.TextInput(attrs={'placeholder': 'Введите число в минутах'}))
+    sleep_light_duration = forms.IntegerField(label='Общая продолжительность лёгкой фазы сна:',
+                                              widget=forms.TextInput(attrs={'placeholder': 'Введите число в минутах'}))
+    total_time_bed = forms.IntegerField(label='Общее время, проведённое в кровати:',
+                                        widget=forms.TextInput(attrs={'placeholder': 'Введите число в минутах'}))
 
     class Meta:
         model = SleepRecord
-        fields = ['deep_sleep_duration', 'fast_sleep_duration', 'total_time_bed']
+        fields = ['sleep_deep_duration', 'sleep_light_duration', 'total_time_bed']
         labels = {
-            'deep_sleep_duration': 'Продолжительность глубокой фазы сна:',
-            'fast_sleep_duration': 'Продолжительность лёгкой фазы сна:',
+            'sleep_deep_duration': 'Продолжительность глубокой фазы сна:',
+            'sleep_light_duration': 'Продолжительность лёгкой фазы сна:',
             'total_time_bed': 'Общее время, проведённое в кровати:',
         }
 
@@ -83,23 +83,29 @@ class UpdateSleepRecordForm(forms.ModelForm):
     def __init__(self, user, *args, **kwargs):
         super(UpdateSleepRecordForm, self).__init__(*args, **kwargs)
         # Filter the queryset based on the user input
-        self.fields['data_sleep'].queryset = SleepRecord.objects.filter(user=user).values_list('sleep_time',
+        self.fields['data_sleep'].queryset = SleepRecord.objects.filter(user=user).values_list('sleep_date_time',
                                                                                                flat=True).distinct()
 
-    data_sleep = forms.ModelChoiceField(queryset=SleepRecord.objects.values_list('sleep_time', flat=True).distinct(),
-                                        label='Дата:', to_field_name='sleep_time')
-    deep_sleep_duration = forms.FloatField(label='Продолжительность глубокой фазы сна:',
-                                           widget=forms.TextInput(attrs={'placeholder': 'Введите число в часах'}))
-    fast_sleep_duration = forms.FloatField(label='Продолжительность лёгкой фазы сна:',
-                                           widget=forms.TextInput(attrs={'placeholder': 'Введите число в часах'}))
-    total_time_bed = forms.FloatField(label='Общее время, проведённое в кровати:',
-                                      widget=forms.TextInput(attrs={'placeholder': 'Введите число в часах'}))
+    data_sleep = forms.ModelChoiceField(
+        queryset=SleepRecord.objects.values_list('sleep_date_time', flat=True).distinct(),
+        label='Дата:', to_field_name='sleep_time')
+    sleep_deep_duration = forms.IntegerField(label='Общая продолжительность глубокой фазы сна:',
+                                             widget=forms.TextInput(attrs={'placeholder': 'Введите число в минутах'}))
+    sleep_light_duration = forms.IntegerField(label='Общая продолжительность лёгкой фазы сна:',
+                                              widget=forms.TextInput(attrs={'placeholder': 'Введите число в минутах'}))
+    total_time_bed = forms.IntegerField(label='Общее время, проведённое в кровати:',
+                                        widget=forms.TextInput(attrs={'placeholder': 'Введите число в минутах'}))
 
     class Meta:
         model = SleepRecord
-        fields = ['data_sleep', 'deep_sleep_duration', 'fast_sleep_duration', 'total_time_bed']
+        fields = ['data_sleep', 'sleep_deep_duration', 'sleep_light_duration', 'total_time_bed']
         labels = {
-            'deep_sleep_duration': 'Продолжительность глубокой фазы сна:',
-            'fast_sleep_duration': 'Продолжительность лёгкой фазы сна:',
+            'sleep_deep_duration': 'Продолжительность глубокой фазы сна:',
+            'sleep_light_duration': 'Продолжительность лёгкой фазы сна:',
             'total_time_bed': 'Общее время, проведённое в кровати:',
         }
+
+
+class CSVImportForm(forms.Form):
+    csv_file = forms.FileField(label='Выберите CSV-файл', widget=forms.ClearableFileInput(
+        attrs={'class': 'dropzone','id': 'csv-dropzone', 'accept': '.csv'}))

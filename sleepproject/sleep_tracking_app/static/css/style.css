@@ -1,0 +1,84 @@
+.dropzone {
+    border: 2px dashed #007bff;
+    border-radius: 8px;
+    background: #f8f9fa;
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dropzone .dz-message {
+    font-size: 1.2rem;
+    color: #6c757d;
+    text-align: center;
+}
+
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    min-height: calc(100% - 56px);
+}
+
+table {
+    border-collapse: collapse;
+    border-spacing: 5px 5px;
+    width: 100%;
+    text-align: center;
+}
+
+th {
+    background-color: #b0b7c6;
+    color: #ffffff;
+}
+
+tr td:first-child {
+    background-color: #b0b7c6;
+    color: #ffffff;
+
+}
+.alert-danger {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #f5c6cb;
+    margin-top: 15px;
+    text-align: center;
+}
+
+#tasks-progress {
+    margin-top: 1rem;
+}
+
+.progress-wrapper {
+    background: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+    height: 20px;
+    margin-bottom: 0.5rem;
+}
+
+.progress-bar {
+    height: 100%;
+    width: 0;
+    transition: width 0.3s ease;
+    background-color: #4caf50 !important;
+}
+
+/* Скрыть иконки успеха/ошибки и удаления */
+.dz-success-mark,
+.dz-error-mark,
+.dz-remove {
+    display: none !important;
+}
+
+/* Контейнер превью файлов */
+.dz-preview {
+    display: none !important; /* Отображаем в столбец */
+}
+

@@ -11,18 +11,7 @@
 
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
 
-    <style>
-        html, body {
-            height: 100%;
-            margin: 0;
-            padding: 0;
-        }
-
-        .container {
-            min-height: calc(100% - 56px);
-        }
-
-    </style>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}" type="text/css">
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
@@ -49,8 +38,8 @@
                     <a class="nav-link" href="{% url 'add_users_sleep_data' %}" style="font-size: 20px;">Добавить данные о сне</a>
                 </li>
                     {% block exit %}
-                 <li class="nav-item">
-                    <a class="nav-link" href="{% url 'logout' %}?next={% url 'login' %}" style="font-size: 20px;">Выйти</a>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'custom_logout' %}?next={% url 'login' %}" style="font-size: 20px;">Выйти</a>
                 </li>
                   {% endblock %}
             </ul>

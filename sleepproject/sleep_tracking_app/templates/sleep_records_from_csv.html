@@ -1,0 +1,51 @@
+{% extends 'home.html' %}
+{% load static %}
+
+{% block title %}
+    Добавление данных о режиме сна из файла
+{% endblock %}
+
+{% block content %}
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">Добавление данных о режиме сна</div>
+                    <div class="card-body">
+                        <form action="{% url 'sleep_records_from_csv' %}" method="post" enctype="multipart/form-data"
+                              class="dropzone" id="csv-dropzone">
+                            {% csrf_token %}
+                            <div class="dz-message">
+                                Перетащите CSV-файл (файлы) сюда или нажмите, чтобы выбрать<br>
+                                <small>(только .csv)</small>
+                            </div>
+                        </form>
+                        <!-- Progress Bar -->
+                        <div id="tasks-progress" style="display:none;"></div>
+                        <!--
+                        <div id="celery-progress" style="display:none;">
+                            <div class="progress-wrapper">
+                                <div id="progress-bar" class="progress-bar">&nbsp;
+                                </div>
+
+                            </div>
+                            <div id="progress-bar-message">Ожидание начала выполнения</div>
+                        </div>-->
+                        <div id="file-type-error" class="alert alert-danger mt-3" style="display: none;">
+                            Данный формат не поддерживается.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/min/dropzone.min.js"></script>
+    <script>
+        const csrfToken = '{{ csrf_token }}';
+    </script>
+    <script src="{% static 'celery_progress/celery_progress.js' %}"></script>
+    <script src="{% static 'javascript/drag_n_drop.js' %}"></script>
+{% endblock %}

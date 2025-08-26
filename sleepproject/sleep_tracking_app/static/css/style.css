@@ -78,9 +78,82 @@ table {
 
 }
 
+/* Pagination */
 #pagination {
     display: flex;
-    justify-content: space-between;
+    gap: 0.5rem;
+    z-index: 2; /* Ensure it's above the header */
+}
+
+#pagination .btn-outline-secondary {
+    border-color: rgba(255, 255, 255, 0.3);
+    color: white;
+    background-color: rgba(255, 255, 255, 0.15);
+    border-radius: 0.5rem;
+    padding: 0.4rem 0.8rem;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+}
+
+#pagination .btn-outline-secondary:hover {
+    background-color: white;
+    border-color: white;
+    color: #047857; /* Emerald color to match the header */
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+#pagination .btn-outline-secondary i {
+    font-size: 1rem;
+}
+
+/* Period Selection Buttons */
+#mode-buttons {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.mode-btn {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    color: #4a5568;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.mode-btn i {
+    margin-right: 0.4rem;
+    font-size: 1rem;
+}
+
+.mode-btn:hover {
+    background-color: #f8fafc;
+    border-color: #cbd5e0;
+    transform: translateY(-1px);
+}
+
+.mode-btn.active {
+    background-color: #f3f0ff;
+    border-color: #d6bcfa;
+    color: #6d28d9;
+    font-weight: 500;
+}
+
+.mode-btn.active i {
+    color: #8b5cf6;
 }
 
 /* Стили для обтекания текста вокруг картинки */
@@ -459,4 +532,141 @@ select {
     background-position: right 0.75rem center;
     background-size: 1.25rem;
     padding-right: 2.5rem !important;
+}
+
+/* Profile Headers with Soft Gradients */
+.profile-header {
+    padding: 1.5rem;
+    border-radius: 0.75rem 0.75rem 0 0;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.profile-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    opacity: 0.1;
+    background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 100%);
+    z-index: 0;
+}
+
+.profile-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    position: relative;
+    z-index: 1;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.profile-header h5 {
+    margin: 0;
+    font-weight: 600;
+    position: relative;
+    z-index: 1;
+    color: white;
+}
+
+.profile-header .text-muted {
+    color: rgba(255, 255, 255, 0.8) !important;
+    font-size: 0.9rem;
+    position: relative;
+    z-index: 1;
+}
+
+/* Indigo Header (Moon & Stars) */
+.profile-header--indigo {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.profile-avatar--indigo {
+    background: rgba(255, 255, 255, 0.15);
+    color: #e0e7ff;
+}
+
+/* Emerald Header (Graph) */
+.profile-header--teal {
+    background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+}
+
+.profile-avatar--teal {
+    background: rgba(255, 255, 255, 0.15);
+    color: #d1fae5;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Red Header (Heart Rate) */
+.profile-header--rose {
+    background: linear-gradient(135deg, #ff5e62 0%, #ff2d55 100%);
+}
+
+.profile-avatar--rose {
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffebee;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Amber Header (Lightbulb) */
+.profile-header--amber {
+    background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+}
+
+.profile-avatar--amber {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fffaf0;
+}
+
+/* Badge Styles */
+.badge-soft {
+    display: inline-block;
+    padding: 0.4rem 0.8rem;
+    border-radius: 1rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.badge-soft--day {
+    background: rgba(96, 165, 250, 0.15);
+    color: #3b82f6;
+}
+
+.badge-soft--night {
+    background: rgba(99, 102, 241, 0.15);
+    color: #4f46e5;
+}
+
+.badge-soft--sun {
+    background: rgba(251, 191, 36, 0.15);
+    color: #d97706;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .profile-header {
+        padding: 1.25rem;
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .profile-avatar {
+        margin: 0 auto 1rem;
+    }
+    
+    .profile-header h5 {
+        margin-bottom: 0.25rem;
+    }
 }

@@ -203,8 +203,7 @@ function loadPage(params) {
 
             // Обновляем текст о средней продолжительности сна
             const avgDurationElement = $('#avg_duration');
-
-            avgDurationElement.text(`${response.avg_sleep_duration} часов.`);
+            avgDurationElement.text(`${response.metric.avg_sleep_duration} часов.`);
 
 
             // Обновляем пагинацию

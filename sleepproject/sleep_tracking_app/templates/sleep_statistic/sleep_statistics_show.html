@@ -256,7 +256,7 @@
                             <p class="mb-4">Средняя продолжительность сна за этот период:
                                 <strong class="text-primary" id="avg_duration">
                                     {% if metric.avg_sleep_duration %}
-                                        {{ metric.avg_sleep_duration }}
+                                        {{ metric.avg_sleep_duration|safe }} часов.
                                     {% else %}
                                         0 часов.
                                     {% endif %}

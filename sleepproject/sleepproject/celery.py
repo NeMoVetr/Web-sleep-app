@@ -16,6 +16,7 @@ app.conf.beat_schedule = {
         'task': 'sleep_tracking_app.tasks.send_reminder_email',
         'schedule': crontab(minute=0, hour=20),  # Один раз в день
     },
+
 }
 
 app.conf.broker_connection_retry_on_startup = True

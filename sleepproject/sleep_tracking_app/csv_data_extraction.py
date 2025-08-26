@@ -1,4 +1,5 @@
 import json
+from datetime import timedelta
 
 import pandas as pd
 from celery_progress.backend import ProgressRecorder
@@ -23,7 +24,7 @@ def mask_night(heart_idx: pd.Index, start: pd.Timestamp, end: pd.Timestamp) -> b
         return (heart_idx >= start) | (heart_idx < end)
 
 
-def sleep_record_from_csv(sleep_data: pd.DataFrame, progress_recorder: ProgressRecorder) -> (
+def sleep_record_from_csv(sleep_data: pd.DataFrame, progress_recorder: ProgressRecorder = None) -> (
         pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame):
     """
     Извлекает данные из CSV-файла, фильтруя записи сна и ночной сердечный ритм
@@ -33,12 +34,12 @@ def sleep_record_from_csv(sleep_data: pd.DataFrame, progress_recorder: ProgressR
     required_columns = ['Key', 'Time', 'Value']
     if not all(col in sleep_data.columns for col in required_columns):
         return None
-        
+
     # Проверяем наличие хотя бы одной записи сна с валидным JSON
     sleep_entries = sleep_data[sleep_data['Key'] == 'sleep']
     if sleep_entries.empty:
         return None
-        
+
     # Проверяем, что хотя бы одна запись имеет валидный JSON с items
     has_valid_sleep = False
     for value in sleep_entries['Value'].head(5):  # Проверяем только первые 5 записей
@@ -49,7 +50,7 @@ def sleep_record_from_csv(sleep_data: pd.DataFrame, progress_recorder: ProgressR
                 break
         except (json.JSONDecodeError, AttributeError):
             continue
-            
+
     if not has_valid_sleep:
         return None
 

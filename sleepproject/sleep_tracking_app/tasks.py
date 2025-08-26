@@ -11,7 +11,9 @@ from django.core.mail import send_mass_mail
 from django.db import transaction
 
 from .csv_data_extraction import sleep_record_from_csv
-from .models import SleepRecord, SleepSegment, NightHeartRateEntry
+from .models import SleepRecord, SleepSegment, NightHeartRateEntry, SleepStatistics, UserData
+
+from .sleep_statistic import calculate_sleep_statistics_metrics
 
 
 @shared_task(bind=True, name='import_sleep_records_task')
@@ -19,17 +21,24 @@ def import_sleep_records(self, user_id: int, csv_path: str):
     progress_recorder = ProgressRecorder(self)
 
     user = User.objects.get(pk=user_id)
-
+    user_data = UserData.objects.get(user=user)
     # Считаем CSV прямо по пути
     df = pd.read_csv(csv_path, encoding='utf-8')
     sleep_data = sleep_record_from_csv(df, progress_recorder)
 
     if sleep_data is None:
+        os.remove(csv_path)
         return {"status": "error", "message": "Invalid CSV file"}
 
     meta, items, night_hr = sleep_data
     total = len(meta)
     processed = 0
+
+    # Получаем данные пользователя
+    age = user_data.get_age_months()
+    gender = user_data.gender
+    weight = user_data.weight
+    height = user_data.height
 
     with transaction.atomic():
         # Создаём или обновляем базовые записи сна и собираем их в словарь
@@ -64,10 +73,12 @@ def import_sleep_records(self, user_id: int, csv_path: str):
         # Удаляем старые дочерние объекты разом
         SleepSegment.objects.filter(record__in=record_map.values()).delete()
         NightHeartRateEntry.objects.filter(record__in=record_map.values()).delete()
+        SleepStatistics.objects.filter(user=user).delete()
 
         # Подготавливаем объекты для bulk_create
         segments_to_create = []
         night_hr_to_create = []
+
 
         # --- подготавливаем сегменты сна ---
         for idx, seg in items.iterrows():
@@ -98,14 +109,30 @@ def import_sleep_records(self, user_id: int, csv_path: str):
         SleepSegment.objects.bulk_create(segments_to_create, batch_size=1000)
         NightHeartRateEntry.objects.bulk_create(night_hr_to_create, batch_size=1000)
 
+        # --- подготавливаем статистику сна ---
+        sleep_statistic_to_create = []
+        for record in record_map.values():
+            record.refresh_from_db()
+            stats  = calculate_sleep_statistics_metrics(record, age, gender, weight, height)
+
+            sleep_statistic_to_create.append(
+                SleepStatistics(
+                    user=user,
+                    date=record.sleep_date_time.date(),
+                    latency_minutes=stats ['latency_minutes'],
+                    sleep_efficiency=stats ['sleep_efficiency'],
+                    sleep_phases=stats ['sleep_phases'],
+                    sleep_fragmentation_index=stats ['sleep_fragmentation_index'],
+                    sleep_calories_burned=stats ['sleep_calories_burned']
+                )
+            )
+
+        # bulk insert
+        SleepStatistics.objects.bulk_create(sleep_statistic_to_create, batch_size=1000)
+
     # transaction.atomic откатит изменения автоматически
 
-    # После обработки удалить временный файл
-    try:
-        os.remove(csv_path)
-    except OSError:
-        pass
-
+    os.remove(csv_path)
     return {"status": "completed", "imported": processed}
 
 

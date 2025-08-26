@@ -1,7 +1,12 @@
+from datetime import timedelta
+
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
+from django.utils import timezone
+from django.db.models import QuerySet
 
+import numpy as np
 
 # Create your models here.
 class UserData(models.Model):
@@ -19,10 +24,23 @@ class UserData(models.Model):
 
     active = models.BooleanField(default=False)
 
+    def get_age_months(self)->np.float64:
+        """
+        Возвращает возраст пользователя в месяцах на основе даты рождения.
+        """
+
+        date_current = timezone.now().date()
+        age = np.float64((date_current.year - self.date_of_birth.year) * 12 + (
+                date_current.month - self.date_of_birth.month))
+        return age
+
+    def get_gender(self) ->str:
+        return 'Женский ' if self.gender == 0 else 'Мужской'
+
 
 class SleepRecord(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    sleep_date_time = models.DateTimeField()  # дата фиксации сна в БД
+    sleep_date_time = models.DateTimeField(db_index=True)  # дата фиксации сна в БД
 
     sleep_rem_duration = models.PositiveSmallIntegerField(null=True, blank=True,
                                                           validators=[MinValueValidator(0), MaxValueValidator(
@@ -63,12 +81,38 @@ class SleepRecord(models.Model):
     device_wake_up_time = models.DateTimeField(null=True,
                                                blank=True)  # время, когда устройство зафиксировало пробуждение (может отличаться от wake_up_time)
 
-    total_time_bed = models.DecimalField(null=True, blank=True,  max_digits=5, decimal_places=2,
+    total_time_bed = models.DecimalField(null=True, blank=True, max_digits=5, decimal_places=2,
                                          validators=[MinValueValidator(0),
                                                      MaxValueValidator(1440)])  # Убрать везде (устарело)
 
     class Meta:
         unique_together = ('user', 'sleep_date_time')
+        indexes = [
+            models.Index(fields=['user', 'sleep_date_time']),
+        ]
+
+    @classmethod
+    def get_last_sleep_records(cls, user, days: int = 7) -> QuerySet:
+        """
+        Возвращает записи сна пользователя за последние `days` дней
+        относительно самой последней записи (по sleep_date_time).
+        """
+        last = cls.objects.filter(user=user).order_by('-sleep_date_time').first()
+        if not last:
+            return cls.objects.none()
+
+        # используем timezone-aware datetime если в БД такие объекты
+        cutoff = last.sleep_date_time - timedelta(days=days)
+        return cls.objects.filter(user=user, sleep_date_time__gt=cutoff).order_by('sleep_date_time')
+
+    @classmethod
+    def get_delta_days_sleep_records(cls, user: User) -> QuerySet:
+        """
+        Возвращает QuerySet записей SleepRecords для пользователя,
+        упорядоченных от самой последней к самой ранней
+        """
+
+        return cls.objects.filter(user=user).order_by('-sleep_date_time', 'id')
 
 
 """class DayHeartRateEntry(models.Model):
@@ -77,6 +121,7 @@ class SleepRecord(models.Model):
     bpm = models.PositiveSmallIntegerField(
         validators=[MinValueValidator(0), MaxValueValidator(300)])
 """
+
 
 class NightHeartRateEntry(models.Model):
     record = models.ForeignKey(SleepRecord, on_delete=models.CASCADE, related_name='night_hr_entries')
@@ -100,22 +145,47 @@ class SleepSegment(models.Model):
 class SleepStatistics(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
 
-    latency_minutes = models.FloatField()  # Латентность сна в минутах
-    sleep_efficiency = models.FloatField()  # Эффективность сна в процентах
-    sleep_phases = models.JSONField()  # Процент каждой фазы сна (глубокий, легкий, REM, бодрствование)
-    sleep_fragmentation_index = models.FloatField()  # Индекс фрагментации сна
-    sleep_calories_burned = models.FloatField()  # Сожжённые калории во время сна (на основе BMR)
+    latency_minutes = models.FloatField(null=True, blank=True)  # Латентность сна в минутах
+    sleep_efficiency = models.FloatField(null=True, blank=True)  # Эффективность сна в процентах
+    sleep_phases = models.JSONField(null=True,
+                                    blank=True)  # Процент каждой фазы сна (глубокий, легкий, REM, бодрствование)
+    sleep_fragmentation_index = models.FloatField(null=True, blank=True)  # Индекс фрагментации сна
+    sleep_calories_burned = models.FloatField(null=True, blank=True)  # Сожжённые калории во время сна (на основе BMR)
+    date = models.DateField(db_index=True)  # Дата, к которой относятся эти данные
+
+    recommended = models.TextField(null=True, blank=True)  # Рекомендовано ли пользователю улучшение сна
 
 
 
+    sleep_duration = models.PositiveSmallIntegerField(null=True,
+                                                      blank=True)  # deep_sleep_duration + fast_sleep_duration
+    sleep_quality = models.FloatField(null=True, blank=True)  # Это поле генерируется на основании данных пользователя
+    health_impact = models.CharField(null=True, blank=True,
+                                     max_length=255)  # краткая сводка которая основывается на полученных результатах
 
+    calories_burned = models.FloatField(null=True, blank=True)  # сожженные калории во сне
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['user', 'date']),
+        ]
 
+    @classmethod
+    def get_last_sleep_statistics(cls, user: User) -> "SleepStatistics | None":
+        """
+        Возвращает статистику пользователя за последний день
+        """
 
+        last = cls.objects.filter(user=user).order_by('-date').first()
 
+        return last
 
-    sleep_duration = models.PositiveSmallIntegerField()  # deep_sleep_duration + fast_sleep_duration
-    sleep_quality = models.FloatField()  # Это поле генерируется на основании данных пользователя
-    health_impact = models.CharField(max_length=255)  # краткая сводка которая основывается на полученных результатах
-    date = models.DateField(auto_now_add=True)
-    calories_burned = models.FloatField()  # сожженные калории во сне
+    @classmethod
+    def get_delta_days_sleep_statistics(cls, user: User) -> QuerySet:
+        """
+        Возвращает QuerySet записей SleepStatistics для пользователя,
+        упорядоченных от самой последней к самой ранней
+        """
+
+        return cls.objects.filter(user=user).order_by('-date', 'id')
+

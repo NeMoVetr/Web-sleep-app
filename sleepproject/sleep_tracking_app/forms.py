@@ -1,8 +1,8 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
-from datetime import datetime
+from datetime import date
 from .models import SleepRecord, UserData, User
-from dragndrop_related.views import DragAndDropView
+
 
 
 class UserDataForm(forms.ModelForm):
@@ -11,7 +11,7 @@ class UserDataForm(forms.ModelForm):
         (0, 'Женский'),
     )
     date_of_birth = forms.DateField(required=True, label='Дата рождения',
-                                    widget=forms.DateInput(attrs={'type': 'date', 'max': datetime.now().date()}))
+                                    widget=forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'max': date.today().isoformat(),}), input_formats=['%Y-%m-%d', '%d.%m.%Y'])
     weight = forms.IntegerField(min_value=10, required=True, label='Вес',
                                 widget=forms.TextInput(attrs={'placeholder': 'Введите ваш вес (кг)'}))
     gender = forms.TypedChoiceField(label='Пол', coerce=int, choices=GENDER_CHOICES)

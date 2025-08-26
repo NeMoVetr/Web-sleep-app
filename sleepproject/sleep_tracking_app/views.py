@@ -1,7 +1,9 @@
 import json
-from datetime import timedelta
 import os
-import pandas as pd
+from typing import Optional
+import uuid
+
+from cursor_pagination import CursorPaginator
 
 from django.contrib import messages
 from django.contrib.auth import logout
@@ -14,10 +16,12 @@ from django.views.generic import TemplateView
 from django.utils import timezone
 from django.core.files.storage import FileSystemStorage
 
+from .sleep_statistic import get_sleep_phases_pie_data, get_heart_rate_bell_curve_data, chronotype_assessment, \
+    sleep_regularity, get_sleep_efficiency_trend, get_sleep_duration_trend, avg_sleep_duration, create_prompt
+
 from .tasks import import_sleep_records
 from sleepproject.settings import MEDIA_ROOT
-from .calculations import calculate_sleep_statistics, plot_sleep_histograms, plot_sleep_duration_sleep_quality, \
-    plot_sleep_quality, plot_sleep_deep_fast
+from .calculations import calculate_sleep_statistics
 
 from .forms import SleepRecordForm, UserRegistrationForm, UserDataForm, UserInfoUpdateForm, UpdateSleepRecordForm, \
     CSVImportForm
@@ -91,10 +95,8 @@ def add_users_sleep_data(request: HttpRequest) -> HttpResponse:
 @login_required
 def user_update(request: HttpRequest) -> HttpResponse:
     user = request.user
-    try:
-        user_data = UserData.objects.get(user=user)
-    except UserData.DoesNotExist:
-        user_data = None
+
+    user_data = UserData.objects.get(user=user)
 
     if request.method == 'POST':
         form = UserInfoUpdateForm(request.POST, instance=user)
@@ -108,12 +110,13 @@ def user_update(request: HttpRequest) -> HttpResponse:
             return redirect('profile')
     else:
         form = UserInfoUpdateForm(instance=user)
-        user_data_form = UserDataForm(instance=user_data) if user_data else None
+        user_data_form = UserDataForm(instance=user_data)
 
     context = {
         'form': form,
         'user_data_form': user_data_form,
     }
+
     return render(request, 'update_user.html', context)
 
 
@@ -161,88 +164,179 @@ def sleep_records_from_csv(request: HttpRequest) -> HttpResponse:
     if request.method == 'POST':
         csv_file = request.FILES['csv_file']
         fs = FileSystemStorage(location=os.path.join(MEDIA_ROOT, 'tmp'))
-        filename = fs.save(csv_file.name, csv_file)
+        unique_filename = f'{uuid.uuid4()}_{csv_file.name}'
+        filename = fs.save(unique_filename, csv_file)
         tmp_path = fs.path(filename)
 
         # запускаем Celery‑таску
         task = import_sleep_records.delay(request.user.id, tmp_path)
 
-
         return JsonResponse({'task_id': task.id})
 
-
-
     return render(request, 'sleep_records_from_csv.html', {'form': CSVImportForm()})
-
-
 
 
 @login_required
 def sleep_statistics_show(request: HttpRequest) -> HttpResponse:
     user = request.user
-
     user_data = UserData.objects.get(user=user)
 
-    # Получаем статистику сна и записи сна за последние 10 дней
-    sleep_statistics_set = SleepStatistics.objects.filter(user=user, date__gte=today - timedelta(days=10))
-    sleep_record_set = SleepRecord.objects.filter(user=user, date__gte=today - timedelta(days=10))
+    # Получаем объект последней статистики (метод может возвращать queryset или уже объект)
+    sleep_statistics = SleepStatistics.get_last_sleep_statistics(user=user)
 
-    if not sleep_record_set.exists() and not sleep_statistics_set.exists():
-        context = {'html_table_sleep_statistics': None, 'html_table_sleep_record': None}
-        return render(request, 'sleep_statistics_show.html', context)
+    # Записи сна за 7 дней (queryset — может быть пустым)
+    sleep_record_set = SleepRecord.get_last_sleep_records(user=user, days=7)
 
-    if not sleep_statistics_set.filter(date=today).exists() and sleep_record_set.filter(sleep_time=today).exists():
-        calculate_sleep_statistics(user=user, user_data=user_data)
-        sleep_statistics_set = SleepStatistics.objects.filter(user=user, date__gte=today - timedelta(days=10))
-        sleep_record_set = SleepRecord.objects.filter(user=user, date__gte=today - timedelta(days=10))
+    last_record = sleep_record_set.order_by('-sleep_date_time').first()
 
-    data_sleep_statistics = {
-        'Дата': [sleep_statistic.date for sleep_statistic in sleep_statistics_set],
-        'Продолжительность сна (часы)': [round(sleep_statistic.sleep_duration / 60, 2) for sleep_statistic in
-                                         sleep_statistics_set],
-        'Качество сна (%)': [sleep_statistic.sleep_quality for sleep_statistic in sleep_statistics_set],
-        'Сожженные калории во время сна (кк)': [sleep_statistic.calories_burned for sleep_statistic in
-                                                sleep_statistics_set],
+    if sleep_statistics:
+        # Если поле recommended ещё пустое — попробуем получить рекомендацию
+        if not sleep_statistics.recommended:
+            rec = create_prompt(user_data=user_data, sleep_statistics=sleep_statistics,
+                                sleep_record=sleep_record_set.latest('sleep_date_time'))
+            SleepStatistics.objects.filter(user=user, date=sleep_statistics.date).update(recommended=rec)
+        else:
+            rec = sleep_statistics.recommended
+    else:
+        rec = "У вас пока нет статистики сна. Сохраняйте первые записи — и мы дадим персональные советы."
+
+    # Пагинация
+    page_size = int(request.GET.get('page_size', 7))
+    qs = SleepRecord.get_delta_days_sleep_records(user)
+
+    paginator = CursorPaginator(qs, ordering=('-sleep_date_time', '-id'))
+
+    after = request.GET.get('after')
+    before = request.GET.get('before')
+
+    if before:
+        page = paginator.page(last=page_size, before=before)
+    else:
+        page = paginator.page(first=page_size, after=after)
+
+    # Курсоры для ответа
+    next_cursor: Optional[str] = paginator.cursor(page[-1]) if page and page.has_next else None
+    prev_cursor: Optional[str] = paginator.cursor(page[0]) if page and page.has_previous else None
+
+    # Подготовка данных для графика
+    graph_data = get_sleep_duration_trend(page)
+
+    # Метрики
+    metric = {
+        'chronotype': chronotype_assessment(user=user, day=7),
+        'sleep_regularity': sleep_regularity(user=user, day=7),
+        'avg_sleep_duration': avg_sleep_duration(page) if page else 0,
+        'calories_burned': getattr(sleep_statistics, 'sleep_calories_burned', 0),
+        'sleep_efficiency': round(getattr(sleep_statistics, 'sleep_efficiency', 0), 2),
     }
-    recommended_sleep = sleep_statistics_set.latest('date').health_impact
+    print (metric)
 
-    data_sleep_record = {
-        'Дата': [sleep_record.sleep_date_time for sleep_record in sleep_record_set],
+    # Подготовка plot_data
+    first_date = graph_data['dates'][0] if graph_data.get('dates') else 0
+    last_date = graph_data['dates'][-1] if graph_data.get('dates') else 0
 
-        'Продолжительность глубокого сна (часы)': [round(sleep_record.sleep_deep_duration / 60, 2) for sleep_record in
-                                                   sleep_record_set],
-        'Продолжительность лёгкого сна (часы)': [round(sleep_record.sleep_light_duration / 60, 2) for sleep_record in
-                                                 sleep_record_set],
+    phases = get_sleep_phases_pie_data(sleep_statistics)
+    heart_rate = get_heart_rate_bell_curve_data(last_record)
+
+    plot_data = {
+        'phases': phases,
+        'graph_data': graph_data,
+        'heart_rate': heart_rate,
+        'first_date': first_date,
+        'last_date': last_date,
     }
 
-    df_sleep_statistics = pd.DataFrame(data_sleep_statistics)
+    # AJAX-ответ
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
 
-    html_table_sleep_statistics = df_sleep_statistics.to_html(
-        classes=["table-bordered", "table-striped", "table-hover"], index=False)
+        return JsonResponse({
+            'has_next': page.has_next,
+            'has_previous': page.has_previous,
+            'next_cursor': next_cursor,
+            'prev_cursor': prev_cursor,
+            'graph_data': graph_data,
+            'first_date': first_date,
+            'last_date': last_date,
+            'metric': metric,
 
-    df_sleep_record = pd.DataFrame(data_sleep_record)
+        })
 
-    html_table_sleep_record = df_sleep_record.to_html(classes=["table-bordered", "table-striped", "table-hover"],
-                                                      index=False)
+    # Передаём контекст
     context = {
-        'html_table_sleep_statistics': html_table_sleep_statistics,
-        'html_table_sleep_record': html_table_sleep_record,
+        'page': page,
+        'graph_data': graph_data,
+        'metric': metric,
+        'plot_data': plot_data,
+        'page_size': page_size,
+        'rec': rec,
+        'next_cursor': next_cursor,
+        'prev_cursor': prev_cursor,
+
     }
 
-    # Построение графика
-    graph_phase = plot_sleep_histograms(sleep_statistics_set)
-    graph_duration_quality = plot_sleep_duration_sleep_quality(sleep_statistics_set)
-    graph_sleep_deep_fast = plot_sleep_deep_fast(sleep_record_set)
-    graph_quality = plot_sleep_quality(sleep_statistics_set)
+    return render(request, 'sleep_statistic/sleep_statistics_show.html', context)
 
-    context2 = {
-        'graph_phase': json.dumps(graph_phase),
-        'graph_duration_quality': json.dumps(graph_duration_quality),
-        'graph_sleep_deep_fast': json.dumps(graph_sleep_deep_fast),
-        'graph_quality': json.dumps(graph_quality),
+
+@login_required
+def sleep_history(request: HttpRequest) -> HttpResponse:
+    user = request.user
+
+    page_size = int(request.GET.get('page_size', 7))
+
+    qs = SleepStatistics.get_delta_days_sleep_statistics(user)
+
+    paginator = CursorPaginator(qs, ordering=('-date', '-id'))
+
+    # Получаем курсоры из GET
+    after = request.GET.get('after')  # ссылка на следующий блок (страница вперёд)
+    before = request.GET.get('before')  # ссылка на предыдущий блок (страница назад)
+
+    if before:
+        # Если есть курсор before, то получаем предыдущую страницу
+        page = paginator.page(last=page_size, before=before)
+    else:
+        # Если курсора before нет, то получаем первую страницу
+        page = paginator.page(first=page_size, after=after)
+
+    next_cursor: Optional[str] = paginator.cursor(page[-1]) if page and page.has_next else None
+    prev_cursor: Optional[str] = paginator.cursor(page[0]) if page and page.has_previous else None
+
+    # Преобразуем в JSON для графика
+    graph_data_json = get_sleep_efficiency_trend(page)
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        # Если запрос AJAX, возвращаем только HTML таблицы и курсоры
+        return JsonResponse({
+
+            'has_next': page.has_next,
+            'has_previous': page.has_previous,
+            'next_cursor': next_cursor,
+            'prev_cursor': prev_cursor,
+            'graph_data_json': graph_data_json,
+        })
+
+    context = {
+
+        'has_next': page.has_next,
+        'has_previous': page.has_previous,
+        'next_cursor': next_cursor,
+        'prev_cursor': prev_cursor,
+        'graph_data_json': json.dumps(graph_data_json),
+        'page_size': page_size,
+
     }
 
-    return render(request, 'sleep_statistics_show.html', locals())
+    return render(request, 'sleep_statistic/sleep_history.html', context)
+
+
+@login_required
+def sleep_fragmentation(request: HttpRequest) -> HttpResponse:
+    return render(request, 'sleep_statistic/sleep_fragmentation.html')
+
+
+@login_required
+def sleep_chronotype(request: HttpRequest) -> HttpResponse:
+    return render(request, 'sleep_statistic/sleep_chronotype.html')
 
 
 class CustomPasswordResetView(PasswordResetView):

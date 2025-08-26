@@ -8,16 +8,16 @@ function renderChart(containerId, data, seriesName, dataKey, type_diagram) {
     let color;
     switch (seriesName) {
         case 'Латентность':
-            color = '#FF6B6B'; // Ярко-красный
+            color = '#667eea'; // Ярко-красный
             break;
         case 'Эффективность':
-            color = '#4ECDC4'; // Бирюзовый
+            color = '#10b981'; // Бирюзовый
             break;
         case 'Фрагментация':
-            color = '#45B7D1'; // Голубой
+            color = '#f6d365'; // Голубой
             break;
         case 'Сожженные калории':
-            color = '#96CEB4'; // Зеленовато-голубой
+            color = '#ff5e62'; // Зеленовато-голубой
             break;
         default:
     }

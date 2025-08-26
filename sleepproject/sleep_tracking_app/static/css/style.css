@@ -543,7 +543,7 @@ select {
 .profile-header {
     display: flex;
     align-items: center;
-    padding: 1.5rem;
+    padding: 1.5rem 1.5rem;
     color: white;
     border-radius: 0.5rem 0.5rem 0 0;
     position: relative;
@@ -621,31 +621,37 @@ select {
 }
 
 .profile-avatar {
-    width: 48px;
-    height: 48px;
+    width: 44px;
+    height: 44px;
     border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.5rem;
+    margin-right: 1rem;
+    flex-shrink: 0;
+    font-size: 1.35rem;
     position: relative;
     z-index: 1;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 3px 5px rgba(0, 0, 0, 0.1);
 }
 
 .profile-header h5 {
-    margin: 0;
+    margin: 0 0 0.25rem 0;
     font-weight: 600;
     position: relative;
     z-index: 1;
     color: white;
+    line-height: 1.3;
 }
 
 .profile-header .text-muted {
     color: rgba(255, 255, 255, 0.8) !important;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     position: relative;
     z-index: 1;
+    line-height: 1.4;
+    display: block;
+    margin-top: 0.25rem;
 }
 
 /* Indigo Header (Moon & Stars) */
@@ -682,7 +688,7 @@ select {
 
 /* Amber Header (Lightbulb) */
 .profile-header--amber {
-    background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+    background: linear-gradient(135deg, #eecc5d 0%, #fda085 100%);
 }
 
 .profile-avatar--amber {

@@ -159,6 +159,7 @@ function DurationLiner(containerId, data, seriesName, dataKey) {
     charts[containerId] = Highcharts.chart(containerId, {
         credits: {enabled: false},
         chart: {type: 'line'},
+        colors: ['#10b981'],
         title: {text: `${seriesName}`},
         xAxis: {categories: data.dates},
         yAxis: {title: {text: 'Значение, мин'}},
@@ -279,6 +280,7 @@ function BPMGraph(containerId, heartRateData) {
 
     Highcharts.chart(containerId, {
         credits: {enabled: false},
+
         chart: {zoomType: 'x'},
         title: {text: 'Распределение пульса'},
 
@@ -312,7 +314,7 @@ function BPMGraph(containerId, heartRateData) {
             },
             scatter: {
                 marker: {radius: 3, symbol: 'circle'},
-                color: '#45c454',
+                color: '#ff5e62',
                 tooltip: {pointFormat: 'Пульс: <b>{point.x}</b> уд/мин<br/>Время: {point.name}'}
             }
         },

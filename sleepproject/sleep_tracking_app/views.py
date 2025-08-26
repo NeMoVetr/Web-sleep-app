@@ -229,7 +229,6 @@ def sleep_statistics_show(request: HttpRequest) -> HttpResponse:
         'calories_burned': getattr(sleep_statistics, 'sleep_calories_burned', 0),
         'sleep_efficiency': round(getattr(sleep_statistics, 'sleep_efficiency', 0), 2),
     }
-    print (metric)
 
     # Подготовка plot_data
     first_date = graph_data['dates'][0] if graph_data.get('dates') else 0

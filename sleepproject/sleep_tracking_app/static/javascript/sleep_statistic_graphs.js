@@ -197,7 +197,6 @@ function loadPage(params) {
             }
 
 
-
             // Обновляем текст о количестве записей
             const countElement = $('#count_sleep');
             countElement.text(`Здесь отображается, сколько вы спали каждый день за последние ${currentPageSize} суток.`);
@@ -205,7 +204,6 @@ function loadPage(params) {
             // Обновляем текст о средней продолжительности сна
             const avgDurationElement = $('#avg_duration');
             avgDurationElement.text(`${response.metric.avg_sleep_duration} часов.`);
-
 
             // Обновляем пагинацию
             const pag = $('#pagination');
@@ -345,6 +343,7 @@ function BPMGraph(containerId, heartRateData) {
         ]
     });
 }
+
 
 
 $(document).ready(function () {

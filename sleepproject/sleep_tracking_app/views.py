@@ -17,9 +17,9 @@ from django.utils import timezone
 from django.core.files.storage import FileSystemStorage
 
 from .sleep_statistic import get_sleep_phases_pie_data, get_heart_rate_bell_curve_data, chronotype_assessment, \
-    sleep_regularity, get_sleep_efficiency_trend, get_sleep_duration_trend, avg_sleep_duration, create_prompt
+    sleep_regularity, get_sleep_efficiency_trend, get_sleep_duration_trend, avg_sleep_duration, get_rec_to_prompt
 
-from .tasks import import_sleep_records
+from .tasks import import_sleep_records, sleep_recommended
 from sleepproject.settings import MEDIA_ROOT
 from .calculations import calculate_sleep_statistics
 
@@ -189,16 +189,20 @@ def sleep_statistics_show(request: HttpRequest) -> HttpResponse:
 
     last_record = sleep_record_set.order_by('-sleep_date_time').first()
 
-    if sleep_statistics:
-        # Если поле recommended ещё пустое — попробуем получить рекомендацию
-        if not sleep_statistics.recommended:
-            rec = create_prompt(user_data=user_data, sleep_statistics=sleep_statistics,
-                                sleep_record=sleep_record_set.latest('sleep_date_time'))
-            SleepStatistics.objects.filter(user=user, date=sleep_statistics.date).update(recommended=rec)
-        else:
-            rec = sleep_statistics.recommended
+    rec = None
+    task_id = None
+
+
+    if sleep_statistics and not sleep_statistics.recommended and not request.GET.get("poll"):
+        # Создаём задачу Celery, если ещё нет рекомендации
+        task = sleep_recommended.delay(
+            user_data_id=user_data.id,
+            sleep_statistics_id=sleep_statistics.id,
+            sleep_record_id=last_record.id
+        )
+        task_id = task.id
     else:
-        rec = "У вас пока нет статистики сна. Сохраняйте первые записи — и мы дадим персональные советы."
+        rec = sleep_statistics.recommended
 
     # Пагинация
     page_size = int(request.GET.get('page_size', 7))
@@ -247,7 +251,7 @@ def sleep_statistics_show(request: HttpRequest) -> HttpResponse:
 
     # AJAX-ответ
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-
+        rec = sleep_statistics.recommended if sleep_statistics else None
         return JsonResponse({
             'has_next': page.has_next,
             'has_previous': page.has_previous,
@@ -257,6 +261,8 @@ def sleep_statistics_show(request: HttpRequest) -> HttpResponse:
             'first_date': first_date,
             'last_date': last_date,
             'metric': metric,
+            'rec': rec,
+            'task_id': task_id
 
         })
 
@@ -268,6 +274,7 @@ def sleep_statistics_show(request: HttpRequest) -> HttpResponse:
         'plot_data': plot_data,
         'page_size': page_size,
         'rec': rec,
+        'task_id': task_id,
         'next_cursor': next_cursor,
         'prev_cursor': prev_cursor,
 

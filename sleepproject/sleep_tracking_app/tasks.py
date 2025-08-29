@@ -13,7 +13,7 @@ from django.db import transaction
 from .csv_data_extraction import sleep_record_from_csv
 from .models import SleepRecord, SleepSegment, NightHeartRateEntry, SleepStatistics, UserData
 
-from .sleep_statistic import calculate_sleep_statistics_metrics
+from .sleep_statistic import calculate_sleep_statistics_metrics, get_rec_to_prompt
 
 
 @shared_task(bind=True, name='import_sleep_records_task')
@@ -135,6 +135,16 @@ def import_sleep_records(self, user_id: int, csv_path: str):
     os.remove(csv_path)
     return {"status": "completed", "imported": processed}
 
+@shared_task
+def sleep_recommended(user_data_id: int, sleep_record_id: int, sleep_statistics_id:int):
+    user_data = UserData.objects.get(id=user_data_id)
+    sleep_record = SleepRecord.objects.get(id=sleep_record_id)
+    sleep_statistics = SleepStatistics.objects.get(id=sleep_statistics_id)
+
+    rec = get_rec_to_prompt(user_data, sleep_statistics, sleep_record)
+    sleep_statistics.recommended = rec
+    sleep_statistics.save(update_fields=['recommended'])
+    return rec
 
 @app.task
 def send_reminder_email():

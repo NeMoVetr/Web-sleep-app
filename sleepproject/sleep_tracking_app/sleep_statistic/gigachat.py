@@ -44,7 +44,10 @@ def get_answer(prompt: [str]):
             {"role": "system",
              "content": """Ты — эксперт по сну (сомнолог), 
              твоя задача дать краткую рекомендацию пользователю на основе показателей, которые он прислал. 
-             Твой ответ должен в развёрнутых предложениях, чтобы пользователь понял, что ты эксперт который может донести свою мысль простыми словами."""
+             Твой ответ должен в развёрнутых предложениях, чтобы пользователь понял, что ты эксперт который может донести свою мысль простыми словами.
+             Примечание: запрещено использовать язык разметки Markdown.
+             """
+
              },
             {"role": "user", "content": prompt}
         ],
@@ -60,24 +63,24 @@ def get_answer(prompt: [str]):
     return response.json()["choices"][0]["message"]["content"]
 
 
-def create_prompt(user_data: UserData, sleep_statistics: [SleepStatistics], sleep_record: SleepRecord) -> str:
+def get_rec_to_prompt(user_data: UserData, sleep_statistics: [SleepStatistics], sleep_record: SleepRecord) -> str:
     if sleep_record.sleep_rem_duration > 0:
         prompt = (
             f'''Возраст в месяцах: {user_data.get_age_months()}, 
-            Пол: {user_data.get_gender}, Вес: {user_data.weight}, Рост:{user_data.height}. 
+            Пол: {user_data.get_gender()}, Вес: {user_data.weight}, Рост:{user_data.height}. 
             Мои параметры сна за последний день: продолжительность сна {sleep_record.duration} минут, глубокий сон {sleep_record.sleep_deep_duration} минут, REM-сон {sleep_record.sleep_rem_duration} минут, легкий сон {sleep_record.sleep_light_duration} минут,
             эффективность сна {sleep_statistics.sleep_efficiency}%, 
             индекс фрагментации сна {sleep_statistics.sleep_fragmentation_index}, время засыпания {sleep_statistics.latency_minutes} минут, калории сожжённые во сне {sleep_statistics.sleep_calories_burned} ккал. 
-            Внимательно проанализируй мою запись сна, учитывая все мои показатели. Дай, пожалуйста, рекомендации по улучшению моего сна.'''
+            Внимательно проанализируй мою запись сна, учитывая все мои показатели. Дай конкретные советы, как улучшить мой сон.'''
         )
     else:
         prompt = (
             f'''Возраст в месяцах: {user_data.get_age_months()}, 
-                   Пол: {user_data.get_gender}, Вес: {user_data.weight}, Рост:{user_data.height}. 
+                   Пол: {user_data.get_gender()}, Вес: {user_data.weight}, Рост:{user_data.height}. 
                    Мои параметры сна за последний день: продолжительность сна {sleep_record.duration} минут, глубокий сон {sleep_record.sleep_deep_duration} минут, легкий сон {sleep_record.sleep_light_duration} минут,
                    эффективность сна {sleep_statistics.sleep_efficiency}%, 
                    индекс фрагментации сна {sleep_statistics.sleep_fragmentation_index}, время засыпания {sleep_statistics.latency_minutes} минут, калории сожжённые во сне {sleep_statistics.sleep_calories_burned} ккал. 
-                   Внимательно проанализируй мою запись сна, учитывая все мои показатели. Дай, пожалуйста, рекомендации по улучшению моего сна. Мне нужны конкретные советы, как улучшить мой сон.'''
+                   Внимательно проанализируй мою запись сна, учитывая все мои показатели. Дай конкретные советы, как улучшить мой сон.'''
         )
     return get_answer(prompt)
 

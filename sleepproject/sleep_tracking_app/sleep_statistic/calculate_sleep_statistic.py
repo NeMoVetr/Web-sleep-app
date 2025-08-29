@@ -1,7 +1,5 @@
 from datetime import datetime, timedelta, time
 import numpy as np
-from django.templatetags.static import static
-from django.conf import settings
 from sleep_tracking_app.models import SleepRecord, User
 from .num_to_str import interpret_chronotype
 
@@ -26,76 +24,6 @@ def evaluate_wake_time(sleep_data: SleepRecord) -> datetime:
     if sleep_data.device_wake_up_time >= sleep_data.wake_up_time:
         return sleep_data.device_wake_up_time
     return sleep_data.wake_up_time
-
-
-'''def compute_rr_intervals(bpm_list: list | np.ndarray) -> np.ndarray:
-    # Переводим bpm в RR-интервалы (мс)
-    bpm_array = np.asarray(bpm_list, dtype=np.float64)
-    return 60_000.0 / bpm_array
-
-
-def compute_time_domain(rr_intervals: np.array) -> dict:
-    """
-    Вычисляет основные временные параметры HRV: SDNN, RMSSD, pNN50
-    """
-    results = {
-        'SDNN': sdnn(rr_intervals)['sdnn'],
-        'RMSSD': rmssd(rr_intervals)['rmssd'],
-        'pNN50': nn50(rr_intervals)['pnn50']
-    }
-    return results
-
-
-def compute_frequency_domain(rr_intervals: np.array) -> dict:
-    """
-    Вычисляет частотные параметры HRV через метод Уэлча
-    Возвращает LF, HF, HF/LF
-    """
-
-    # welch_psd принимает последовательность RRI (сек) - переводим из мс в с
-
-    result = welch_psd(rr_intervals / 1000.0, show=False)
-
-    return {
-        'POWER': result['fft_abs'],
-        'LF/HF': result['fft_ratio']
-    }
-
-
-def compute_nonlinear(rr_intervals):
-    """
-    Вычисляет нелинейные параметры HRV: SD1, SD2 и асимметрию (по методике Poincare)
-    """
-
-    stats = poincare(rr_intervals)
-    return {'SD1': stats['sd1'], 'SD2': stats['sd2'], 'SD_ratio': stats['sd_ratio']}'''
-
-"""def compute_hrv_for_record(record: SleepRecord) -> dict:
-    # Извлекаем bpm по ночам и дню
-    night_bpms = [entry.bpm for entry in record.night_hr_entries.order_by('time')]
-    day_bpms = [entry.bpm for entry in record.day_hr_entries.order_by('time')]
-
-    # Вычисляем RRI
-    rr_night = compute_rr_intervals(night_bpms)
-    rr_day = compute_rr_intervals(day_bpms)
-
-    # Временная область
-    td_night = compute_time_domain(rr_night)
-    td_day = compute_time_domain(rr_day)
-
-    # Частотная область
-    fd_night = compute_frequency_domain(rr_night)
-    fd_day = compute_frequency_domain(rr_day)
-
-    # Нелинейная область
-    nl_night = compute_nonlinear(rr_night)
-    nl_day = compute_nonlinear(rr_day)
-
-    return {
-        'time_domain': {'night': td_night, 'day': td_day},
-        'frequency_domain': {'night': fd_night, 'day': fd_day},
-        'nonlinear': {'night': nl_night, 'day': nl_day}
-    }"""
 
 
 def chronotype_assessment(user: User, day: int = None) -> dict:
@@ -151,7 +79,6 @@ def chronotype_assessment(user: User, day: int = None) -> dict:
                                          name="sleep_statistic", language="ru")
 
     key = interpret_str.keys()
-
 
     match key:
         case key if 'skylark' in key:
@@ -236,97 +163,8 @@ def sleep_regularity(user: User, day: int = None) -> dict:
         'wake_time_std': wake_time_std
     }
 
-def calculate_sleep_statistics_metrics(sleep_data: SleepRecord, age: np.float64 = None, gender: int = None,
-                                     weight: float = None, height: int = None) -> dict:
-    """
-    Вычисляет основные метрики сна на основе последней записи сна пользователя.
-    Возвращает словарь с метриками:
-    - latency_minutes: Латентность сна в минутах
-    - sleep_efficiency: Эффективность сна в процентах
-    - sleep_phases: Процент каждой фазы сна (глубокий, легкий, REM, бодрствование)
-    - sleep_fragmentation_index: Индекс фрагментации сна
-    - sleep_calories_burned: Сожжённые калории во время сна (на основе BMR)
 
-    Возвращает пустой словарь, если передан None или невалидные данные.
-    """
-    if not sleep_data or not hasattr(sleep_data, 'segments'):
-        return {}
-
-    try:
-        total_bedtime = evaluate_bedtime(sleep_data) if hasattr(sleep_data, 'bedtime') else None
-        total_wake_time = evaluate_wake_time(sleep_data) if hasattr(sleep_data, 'wake_up_time') else None
-
-        # Латентность сна в минутах
-        latency_minutes = 0.0
-        if total_bedtime:
-            first_segment = sleep_data.segments.order_by('start_time').values_list('start_time', flat=True).first()
-            if first_segment:
-                latency_delta = first_segment - total_bedtime
-                latency_minutes = latency_delta.total_seconds() / 60 if hasattr(latency_delta, 'total_seconds') else 0.0
-
-        # Эффективность сна
-        sleep_efficiency = 0.0
-        if (total_bedtime and total_wake_time and
-            hasattr(total_wake_time, '__sub__') and
-            hasattr(total_bedtime, '__sub__')):
-            try:
-                total_time_in_bed_min = (total_wake_time - total_bedtime).total_seconds() / 60
-                if total_time_in_bed_min > 0 and hasattr(sleep_data, 'duration') and sleep_data.duration:
-                    sleep_efficiency = min(100.0, max(0.0, sleep_data.duration * 100 / total_time_in_bed_min))
-            except (AttributeError, TypeError, ZeroDivisionError):
-                pass
-
-        # Процент каждой фазы сна
-        sleep_phases = {
-            'deep': 0.0,
-            'light': 0.0,
-            'rem': 0.0,
-            'awake': 0.0
-        }
-
-        if hasattr(sleep_data, 'duration') and sleep_data.duration:
-            total_sleep_time = sleep_data.duration + getattr(sleep_data, 'sleep_awake_duration', 0)
-            if total_sleep_time > 0:
-                for phase in ['deep', 'light', 'rem', 'awake']:
-                    phase_duration = getattr(sleep_data, f'sleep_{phase}_duration', 0)
-                    sleep_phases[phase] = min(100.0, max(0.0, (phase_duration / total_sleep_time) * 100))
-
-        # Индекс фрагментации сна
-        interpret_fragmentation = 0.0
-        if (hasattr(sleep_data, 'awake_count') and sleep_data.awake_count is not None and
-            hasattr(sleep_data, 'duration') and sleep_data.duration and sleep_data.duration > 0):
-            try:
-                interpret_fragmentation = sleep_data.awake_count / (sleep_data.duration / 60)
-            except ZeroDivisionError:
-                pass
-
-        # Сожжённые калории во время сна (на основе BMR)
-        sleep_calories_burned = 0.0
-        if all([gender is not None, weight, height, age, hasattr(sleep_data, 'duration')]):
-            try:
-                sleep_calories_burned = calculate_calories_burned(
-                    gender=gender,
-                    weight=weight,
-                    height=height,
-                    age=age,
-                    sleep_duration=getattr(sleep_data, 'duration', 0)
-                )
-            except (TypeError, ValueError):
-                pass
-
-        return {
-            'latency_minutes': round(latency_minutes, 2) if latency_minutes is not None else 0.0,
-            'sleep_efficiency': round(sleep_efficiency, 2) if sleep_efficiency is not None else 0.0,
-            'sleep_phases': sleep_phases,
-            'sleep_fragmentation_index': round(interpret_fragmentation, 2) if interpret_fragmentation is not None else 0.0,
-            'sleep_calories_burned': round(sleep_calories_burned, 2) if sleep_calories_burned is not None else 0.0,
-        }
-
-    except Exception:
-
-        return {}
-
-'''def calculate_sleep_statistics_metrics(sleep_data: SleepRecord, age: np.float64, gender: int, weight: float,
+def calculate_sleep_statistics_metrics(sleep_data: SleepRecord, age: np.float64, gender: int, weight: float,
                                        height: int) -> dict:
     """
     Вычисляет основные метрики сна на основе последней записи сна пользователя.
@@ -337,6 +175,8 @@ def calculate_sleep_statistics_metrics(sleep_data: SleepRecord, age: np.float64 
     - sleep_fragmentation_index: Индекс фрагментации сна
     - sleep_calories_burned: Сожжённые калории во время сна (на основе BMR)
     """
+    if not sleep_data:
+        return {}
 
     total_bedtime = evaluate_bedtime(sleep_data)
     total_wake_time = evaluate_wake_time(sleep_data)
@@ -375,7 +215,7 @@ def calculate_sleep_statistics_metrics(sleep_data: SleepRecord, age: np.float64 
         'sleep_phases': sleep_phases,
         'sleep_fragmentation_index': interpret_fragmentation,
         'sleep_calories_burned': sleep_calories_burned,
-    }'''
+    }
 
 
 def avg_sleep_duration(items: list):

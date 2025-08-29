@@ -1,6 +1,4 @@
 import json
-from datetime import timedelta
-
 import pandas as pd
 from celery_progress.backend import ProgressRecorder
 
@@ -137,7 +135,9 @@ def main():
     csv_file_path = "F:/Pasha/Courses/Web-sleep-app/dataset/hlth_center_fitness_data.csv"
     df = pd.read_csv(csv_file_path, delimiter=',', encoding='utf-8')
 
+
     meta, items, night_hr = sleep_record_from_csv(df)
+
 
 
 if __name__ == "__main__": main()

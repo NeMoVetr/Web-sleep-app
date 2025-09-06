@@ -64,6 +64,7 @@ def get_answer(prompt: [str]):
 
 
 def get_rec_to_prompt(user_data: UserData, sleep_statistics: [SleepStatistics], sleep_record: SleepRecord) -> str:
+
     if sleep_record.sleep_rem_duration > 0:
         prompt = (
             f'''Возраст в месяцах: {user_data.get_age_months()}, 

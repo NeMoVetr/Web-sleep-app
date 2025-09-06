@@ -182,12 +182,12 @@ def sleep_records_from_csv(request: HttpRequest) -> HttpResponse:
 @cache_page(60*15)
 def sleep_statistics_show(request: HttpRequest) -> HttpResponse:
     user = request.user
-    user_data = UserData.objects.select_related('user').get(user=user)
+    user_data = UserData.objects.get(user=user)
 
-    sleep_statistics = SleepStatistics.objects.filter(user=user).select_related('user').order_by('-date').first()
+    sleep_statistics = SleepStatistics.objects.only('id', 'user','recommended','sleep_calories_burned', 'sleep_efficiency', 'sleep_phases').filter(user=user).order_by('-date').first()
 
     # Получаем записи сна за 7 дней с сортировкой по убыванию даты
-    sleep_records = SleepRecord.get_last_sleep_records(user=user, days=7)
+    sleep_records = list(SleepRecord.get_last_sleep_records(user=user, days=7))
 
     last_record = sleep_records[0] if sleep_records else None
 

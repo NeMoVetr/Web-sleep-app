@@ -138,8 +138,8 @@ def import_sleep_records(self, user_id: int, csv_path: str):
 @shared_task
 def sleep_recommended(user_data_id: int, sleep_record_id: int, sleep_statistics_id:int):
     user_data = UserData.objects.get(id=user_data_id)
-    sleep_record = SleepRecord.objects.get(id=sleep_record_id)
-    sleep_statistics = SleepStatistics.objects.get(id=sleep_statistics_id)
+    sleep_record = SleepRecord.objects.only('id','duration','sleep_rem_duration', 'sleep_deep_duration', 'sleep_rem_duration', 'sleep_light_duration').get(id=sleep_record_id)
+    sleep_statistics = SleepStatistics.objects.only('id','sleep_efficiency', 'sleep_fragmentation_index', 'latency_minutes', 'sleep_calories_burned', 'recommended').get(id=sleep_statistics_id)
 
     rec = get_rec_to_prompt(user_data, sleep_statistics, sleep_record)
     sleep_statistics.recommended = rec

@@ -43,6 +43,7 @@ def get_heart_rate_bell_curve_data(latest_sleep: SleepRecord) -> dict:
         return {'date': [], 'bpm': []}
 
     hr_entries = list(latest_sleep.night_hr_entries.all())
+
     if not hr_entries:
         return {'date': [], 'bpm': []}
 

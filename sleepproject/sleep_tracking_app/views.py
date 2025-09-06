@@ -4,7 +4,9 @@ from typing import Optional
 import uuid
 
 from cursor_pagination import CursorPaginator
+from django.db.models import Prefetch
 
+from django.views.decorators.cache import cache_page
 from django.contrib import messages
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
@@ -17,7 +19,7 @@ from django.utils import timezone
 from django.core.files.storage import FileSystemStorage
 
 from .sleep_statistic import get_sleep_phases_pie_data, get_heart_rate_bell_curve_data, chronotype_assessment, \
-    sleep_regularity, get_sleep_efficiency_trend, get_sleep_duration_trend, avg_sleep_duration, get_rec_to_prompt
+    sleep_regularity, get_sleep_efficiency_trend, get_sleep_duration_trend, avg_sleep_duration
 
 from .tasks import import_sleep_records, sleep_recommended
 from sleepproject.settings import MEDIA_ROOT
@@ -25,7 +27,7 @@ from .calculations import calculate_sleep_statistics
 
 from .forms import SleepRecordForm, UserRegistrationForm, UserDataForm, UserInfoUpdateForm, UpdateSleepRecordForm, \
     CSVImportForm
-from .models import SleepRecord, SleepStatistics, UserData
+from .models import SleepRecord, SleepStatistics, UserData, NightHeartRateEntry, SleepSegment
 
 # Create your views here.
 # python-benedict
@@ -177,17 +179,17 @@ def sleep_records_from_csv(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
+@cache_page(60*15)
 def sleep_statistics_show(request: HttpRequest) -> HttpResponse:
     user = request.user
-    user_data = UserData.objects.get(user=user)
+    user_data = UserData.objects.select_related('user').get(user=user)
 
-    # Получаем объект последней статистики (метод может возвращать queryset или уже объект)
-    sleep_statistics = SleepStatistics.get_last_sleep_statistics(user=user)
+    sleep_statistics = SleepStatistics.objects.filter(user=user).select_related('user').order_by('-date').first()
 
-    # Записи сна за 7 дней (queryset — может быть пустым)
-    sleep_record_set = SleepRecord.get_last_sleep_records(user=user, days=7)
+    # Получаем записи сна за 7 дней с сортировкой по убыванию даты
+    sleep_records = SleepRecord.get_last_sleep_records(user=user, days=7)
 
-    last_record = sleep_record_set.order_by('-sleep_date_time').first()
+    last_record = sleep_records[0] if sleep_records else None
 
     rec = None
     task_id = None
@@ -227,8 +229,8 @@ def sleep_statistics_show(request: HttpRequest) -> HttpResponse:
 
     # Метрики
     metric = {
-        'chronotype': chronotype_assessment(user=user, day=7),
-        'sleep_regularity': sleep_regularity(user=user, day=7),
+        'chronotype': chronotype_assessment(sleep_records=sleep_records[:7]) if sleep_records else {},
+        'sleep_regularity': sleep_regularity(sleep_records=sleep_records[:7]) if sleep_records else {},
         'avg_sleep_duration': avg_sleep_duration(page) if page else 0,
         'calories_burned': getattr(sleep_statistics, 'sleep_calories_burned', 0),
         'sleep_efficiency': round(getattr(sleep_statistics, 'sleep_efficiency', 0), 2),
@@ -284,6 +286,7 @@ def sleep_statistics_show(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
+@cache_page(60*15)
 def sleep_history(request: HttpRequest) -> HttpResponse:
     user = request.user
 

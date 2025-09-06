@@ -56,7 +56,8 @@
 
                     <div class="profile-actions mt-4">
                         <a href="{% url 'user_update' %}" class="btn-hero mr-2">Редактировать</a>
-                        <a href="{% url 'logout' %}?next={% url 'login' %}" class="btn-hero btn-hero--muted">Выйти</a>
+                                           
+                        <a class="btn-hero btn-hero--muted" href="{% url 'custom_logout' %}?next={% url 'login' %}" >Выйти</a>
                     </div>
                 </div>
             </div>

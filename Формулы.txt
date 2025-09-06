@@ -45,3 +45,6 @@ celery -A sleepproject worker -l info -P solo
 
 
 Запомнитьь фон: #f8f9fa
+
+
+Кеширование: https://dizballanze.com/ru/django-project-optimization-part-2

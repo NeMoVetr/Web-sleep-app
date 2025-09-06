@@ -464,23 +464,82 @@ table {
 .form-item input[type="password"],
 .form-item input[type="date"],
 .form-item input[type="number"],
+.form-item input[type="reset_email"],
 .form-item input:not([type]),  
-.form-item select {
+.form-item select,
+.form-item textarea {
     width: 100%;
     padding: 0.75rem 1rem;
-    border: 1px solid #dee2e6;
+    border: 2px solid #e1e5ea;
     border-radius: 8px;
     font-size: 1rem;
-    transition: border-color 0.2s, box-shadow 0.2s;
+    transition: all 0.2s ease;
+    background-color: #f8fafc;
+    color: #2d3748;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Text and default inputs */
+.form-item input[type="text"],
+.form-item input:not([type]) {
+    border-color: #cbd5e0;
     background-color: #fff;
 }
 
+/* Email inputs */
+.form-item input[type="email"] {
+    border-color: #cbd5e0;
+    background-color: #fff;
+}
+
+/* Password inputs */
+.form-item input[type="password"] {
+    border-color: #cbd5e0;
+    background-color: #fff;
+}
+
+/* Date inputs */
+.form-item input[type="date"] {
+    border-color: #cbd5e0;
+    background-color: #fff;
+}
+
+/* Number inputs */
+.form-item input[type="number"] {
+    border-color: #cbd5e0;
+    background-color: #fff;
+}
+
+/* Select dropdowns */
+.form-item select {
+    border-color: #cbd5e0;
+    background-color: #fff;
+    cursor: pointer;
+}
+
+/* Textareas */
+.form-item textarea {
+    min-height: 100px;
+    resize: vertical;
+    border-color: #cbd5e0;
+    background-color: #fff;
+}
+
+/* Focus states */
 .form-item input:focus,
-.form-item input:not([type]):focus,
-.form-item select:focus {
-    border-color: #68e1ef;
-    box-shadow: 0 0 0 0.2rem rgba(104, 225, 239, 0.25);
-    outline: 0;
+.form-item select:focus,
+.form-item textarea:focus {
+    border-color: #63b3ed;
+    box-shadow: 0 0 0 3px rgba(99, 179, 237, 0.3);
+    outline: none;
+    background-color: #fff;
+}
+
+/* Hover states */
+.form-item input:hover:not(:focus),
+.form-item select:hover:not(:focus),
+.form-item textarea:hover:not(:focus) {
+   /* border-color: #a0aec0;*/
 }
 
 .form-check-custom {

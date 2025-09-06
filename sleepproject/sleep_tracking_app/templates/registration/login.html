@@ -1,13 +1,24 @@
 
 {% extends "home.html" %}
 {% load static %}
+
+{% block title %}
+Вход в аккаунт
+{% endblock %}
+
 {% block content %}
-<div class="container mt-5">
+<div class="container py-5">
     <div class="row justify-content-center">
-        <div class="col-md-8 col-lg-6">
-            <div class="card shadow-sm">
-                <div class="card-header bg-white border-0 pt-4">
-                    <h1 class="h3 text-center mb-0">Вход в аккаунт</h1>
+        <div class="col-lg-8 col-xl-7">
+            <div class="card profile-card shadow-sm border-0">
+                <div class="profile-header">
+                    <div class="profile-avatar bg-primary-soft">
+                        <i class="bi bi-box-arrow-in-right text-primary"></i>
+                    </div>
+                    <div>
+                        <h2 class="mb-1">Вход в аккаунт</h2>
+                        <div class="text-muted">Введите ваши учетные данные</div>
+                    </div>
                 </div>
                 <div class="card-body px-5 py-4">
                     <form method="post" class="needs-validation" novalidate>

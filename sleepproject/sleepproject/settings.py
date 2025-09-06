@@ -48,7 +48,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'celery_progress',
     'dragndrop_related',
+    'debug_toolbar',
     'sleep_tracking_app',
+
 ]
 
 SITE_ID = 1
@@ -58,6 +60,7 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -102,9 +105,9 @@ DATABASES = {
         'PASSWORD': os.getenv("BD_PASSWORD"),
         'HOST': 'localhost',
         'PORT': '5432',
+        'CONN_MAX_AGE': 60 * 10,  # 10 minutes
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
@@ -171,3 +174,19 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 
 LOGIN_REDIRECT_URL = reverse_lazy('home')
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/1",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
+    }
+}
+
+
+INTERNAL_IPS = [
+
+    '127.0.0.1',
+]

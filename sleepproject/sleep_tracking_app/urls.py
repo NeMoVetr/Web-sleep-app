@@ -1,5 +1,6 @@
-from django.urls import path
+from django.urls import path, include
 
+import debug_toolbar
 from .tasks import send_reminder_email
 from .views import home, register, add_users_sleep_data, user_update, sleep_statistics_show, \
     profile, sleep_record_update, CustomPasswordResetView, CustomPasswordResetDoneView, CustomPasswordResetConfirmView, \
@@ -29,4 +30,6 @@ urlpatterns = [
     path('custom-password-reset-done/', CustomPasswordResetDoneView.as_view(), name='custom_password_reset_done'),
     path('custom-password-reset/', CustomPasswordResetView.as_view(), name='custom_password_reset'),
     path('custom-password-complete/', CustomPasswordResetCompleteView.as_view(), name='custom_password_reset_complete'),
+
+    path('__debug__/', include(debug_toolbar.urls)),
 ]

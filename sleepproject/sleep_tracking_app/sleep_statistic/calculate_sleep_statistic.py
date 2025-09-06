@@ -26,7 +26,59 @@ def evaluate_wake_time(sleep_data: SleepRecord) -> datetime:
     return sleep_data.wake_up_time
 
 
-def chronotype_assessment(user: User, day: int = None) -> dict:
+def chronotype_assessment(sleep_records: list ) -> dict:
+    """
+    Если sleep_records передан — используется он, иначе делаем fallback на запрос.
+    """
+
+    if not sleep_records:
+        return {}
+
+    free_midpoints = []
+    all_midpoints = []
+    free_durations = []
+    all_durations = []
+
+    for record in sleep_records:
+        total_bedtime = evaluate_bedtime(record)  # не делает SQL, должен использовать поля record
+        midpoint = total_bedtime + timedelta(minutes=(record.duration or 0) / 2)
+        midpoint_hour = midpoint.hour + midpoint.minute / 60 + midpoint.second / 3600
+        all_midpoints.append(midpoint_hour)
+        all_durations.append((record.duration or 0) / 60)
+        if total_bedtime.weekday() >= 5:
+            free_midpoints.append(midpoint_hour)
+            free_durations.append((record.duration or 0) / 60)
+
+    # защитные проверки: длина массивов
+    if not free_midpoints:
+        return {}
+
+    msf = float(np.mean(np.array(free_midpoints)))
+    sd_free = float(np.mean(np.array(free_durations))) if free_durations else 0
+    sd_week = float(np.mean(np.array(all_durations))) if all_durations else 0
+
+    msf_sc = msf - 0.5 * (sd_free - sd_week)
+    msf_sc_hours = int(msf_sc)
+    msf_sc_minutes = int((msf_sc % 1) * 60)
+    interpret_str = interpret_chronotype(msf_time=time(hour=msf_sc_hours, minute=msf_sc_minutes),
+                                         name="sleep_statistic", language="ru")
+
+    key = interpret_str.keys()
+
+    match key:
+        case key if 'skylark' in key:
+            interpret_str['img'] = 'skylark.png'
+        case key if 'pigeon' in key:
+            interpret_str['img'] = 'pigeon.png'
+        case key if 'owl' in key:
+            interpret_str['img'] = 'owl.png'
+        case _:
+            interpret_str['img'] = None
+
+    return interpret_str
+
+
+'''def chronotype_assessment(user: User, day: int = None) -> dict:
     """
     Оценка хронотипа пользователя на основе данных о сне за последние N дней.
     """
@@ -90,7 +142,7 @@ def chronotype_assessment(user: User, day: int = None) -> dict:
         case _:
             interpret_str['img'] = None
 
-    return interpret_str
+    return interpret_str'''
 
 
 def calculate_cycle_count(sleep_data: SleepRecord) -> int:
@@ -142,7 +194,20 @@ def time_to_minutes(dt, ref_hour=20):
     return normalized_minutes
 
 
-def sleep_regularity(user: User, day: int = None) -> dict:
+def sleep_regularity(sleep_records: list ) -> dict:
+
+    if not sleep_records:
+        return {}
+    bedtimes = [time_to_minutes(r.bedtime) for r in sleep_records if r.bedtime]
+    wake_times = [time_to_minutes(r.wake_up_time) for r in sleep_records if r.wake_up_time]
+
+    bedtime_std = round(float(np.std(bedtimes)), 2) if len(bedtimes) >= 2 else 0
+    wake_time_std = round(float(np.std(wake_times)), 2) if len(wake_times) >= 2 else 0
+
+    return {'bedtime_std': bedtime_std, 'wake_time_std': wake_time_std}
+
+
+'''def sleep_regularity(user: User, day: int = None) -> dict:
     """
     Оценка регулярности сна пользователя на основе стандартного отклонения времени отхода ко сну и пробуждения
     за последние N дней.
@@ -161,7 +226,7 @@ def sleep_regularity(user: User, day: int = None) -> dict:
     return {
         'bedtime_std': bedtime_std,
         'wake_time_std': wake_time_std
-    }
+    }'''
 
 
 def calculate_sleep_statistics_metrics(sleep_data: SleepRecord, age: np.float64, gender: int, weight: float,
@@ -224,7 +289,7 @@ def avg_sleep_duration(items: list):
     items: список объектов SleepStatistics
     """
 
-    durations = [s.duration for s in items if s.duration]
+    durations = [r.duration for r in items if r.duration]
     if durations:
         return round(np.mean(durations) / 60, 2)
     return 0

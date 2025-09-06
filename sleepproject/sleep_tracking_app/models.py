@@ -92,18 +92,13 @@ class SleepRecord(models.Model):
         ]
 
     @classmethod
-    def get_last_sleep_records(cls, user, days: int = 7) -> QuerySet:
+    def get_last_sleep_records(cls, user) -> QuerySet:
         """
         Возвращает записи сна пользователя за последние `days` дней
         относительно самой последней записи (по sleep_date_time).
         """
-        last = cls.objects.filter(user=user).only('sleep_date_time').order_by('-sleep_date_time').first()
-        if not last:
-            return cls.objects.none()
 
-        # используем timezone-aware datetime если в БД такие объекты
-        cutoff = last.sleep_date_time - timedelta(days=days)
-        return cls.objects.filter(user=user, sleep_date_time__gt=cutoff).only('sleep_date_time', 'id','device_bedtime','duration', 'bedtime', 'wake_up_time', 'night_hr_entries').order_by('sleep_date_time')
+        return cls.objects.filter(user=user).only('sleep_date_time', 'id','device_bedtime','duration', 'bedtime', 'wake_up_time', 'night_hr_entries').order_by('-sleep_date_time')[:7]
 
     @classmethod
     def get_delta_days_sleep_records(cls, user: User) -> QuerySet:

@@ -187,7 +187,7 @@ def sleep_statistics_show(request: HttpRequest) -> HttpResponse:
     sleep_statistics = SleepStatistics.objects.only('id', 'user','recommended','sleep_calories_burned', 'sleep_efficiency', 'sleep_phases').filter(user=user).order_by('-date').first()
 
     # Получаем записи сна за 7 дней с сортировкой по убыванию даты
-    sleep_records = list(SleepRecord.get_last_sleep_records(user=user, days=7))
+    sleep_records = list(SleepRecord.get_last_sleep_records(user=user))
 
     last_record = sleep_records[0] if sleep_records else None
 
@@ -229,8 +229,8 @@ def sleep_statistics_show(request: HttpRequest) -> HttpResponse:
 
     # Метрики
     metric = {
-        'chronotype': chronotype_assessment(sleep_records=sleep_records[:7]) if sleep_records else {},
-        'sleep_regularity': sleep_regularity(sleep_records=sleep_records[:7]) if sleep_records else {},
+        'chronotype': chronotype_assessment(sleep_records=sleep_records) if sleep_records else {},
+        'sleep_regularity': sleep_regularity(sleep_records=sleep_records) if sleep_records else {},
         'avg_sleep_duration': avg_sleep_duration(page) if page else 0,
         'calories_burned': getattr(sleep_statistics, 'sleep_calories_burned', 0),
         'sleep_efficiency': round(getattr(sleep_statistics, 'sleep_efficiency', 0), 2),

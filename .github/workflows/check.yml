@@ -6,7 +6,17 @@ jobs:
         steps:
             - name: Checkout
               uses: actions/checkout@v5
-            - name: Install deps
-              run: npm ci
+
+            - name: Setup Python
+              uses: actions/setup-python@v6
+              with:
+                python-version: '3.12'
+            
+            - name: Install Poetry
+              run: pip install poetry
+              
+            - name: Install dependencies
+              run: poetry install
+              
             - name: Lint
-              run: npm run lint
+              run: poetry run python -m pylint --fail-under=3.0 sleepproject/sleep_tracking_app/

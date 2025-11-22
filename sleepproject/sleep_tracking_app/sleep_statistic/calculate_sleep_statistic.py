@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, time
 import numpy as np
-from sleep_tracking_app.models import SleepRecord, User
+from ..models import SleepRecord, User
 from .num_to_str import interpret_chronotype
 
 
@@ -78,73 +78,6 @@ def chronotype_assessment(sleep_records: list ) -> dict:
     return interpret_str
 
 
-'''def chronotype_assessment(user: User, day: int = None) -> dict:
-    """
-    Оценка хронотипа пользователя на основе данных о сне за последние N дней.
-    """
-    try:
-        # Находим последнюю запись сна для пользователя
-        sleep_data = SleepRecord().get_last_sleep_records(user=user, days=day)
-    except SleepRecord.DoesNotExist:
-        return {}
-
-    if not sleep_data:
-        return {}
-
-    # Разделяем на рабочие дни и выходные (по дате начала сна)
-    free_midpoints = []
-    all_midpoints = []
-    free_durations = []
-    all_durations = []
-
-    for record in sleep_data:
-        total_bedtime = evaluate_bedtime(record)
-
-        # расчёт midpoint как datetime
-        midpoint = total_bedtime + timedelta(minutes=record.duration / 2)
-
-        midpoint_hour = midpoint.hour + midpoint.minute / 60 + midpoint.second / 3600
-
-        all_midpoints.append(midpoint_hour)
-
-        all_durations.append(record.duration / 60)
-
-        # считаем выходные по дню недели bedtime
-        if total_bedtime.weekday() >= 5:
-            free_midpoints.append(midpoint_hour)
-            free_durations.append(record.duration / 60)
-
-    # средние
-    free_midpoints_np = np.array(free_midpoints, dtype=np.float64)
-    free_durations_np = np.array(free_durations, dtype=np.float64)
-    all_durations_np = np.array(all_durations, dtype=np.float64)
-
-    msf = np.mean(free_midpoints_np)  # mid-sleep free
-    sd_free = np.mean(free_durations_np)  # sleep duration free
-    sd_week = np.mean(all_durations_np)  # sleep duration week
-
-    # скорректированный mid-sleep (MSFsc)
-    msf_sc = msf - 0.5 * (sd_free - sd_week)
-    msf_sc_hours = int(msf_sc)
-    msf_sc_minutes = int((msf_sc % 1) * 60)
-    interpret_str = interpret_chronotype(msf_time=time(hour=msf_sc_hours, minute=msf_sc_minutes),
-                                         name="sleep_statistic", language="ru")
-
-    key = interpret_str.keys()
-
-    match key:
-        case key if 'skylark' in key:
-            interpret_str['img'] = 'skylark.png'
-        case key if 'pigeon' in key:
-            interpret_str['img'] = 'pigeon.png'
-        case key if 'owl' in key:
-            interpret_str['img'] = 'owl.png'
-        case _:
-            interpret_str['img'] = None
-
-    return interpret_str'''
-
-
 def calculate_cycle_count(sleep_data: SleepRecord) -> int:
     """
     Количество циклов сна в последней записи сна пользователя.
@@ -207,26 +140,6 @@ def sleep_regularity(sleep_records: list ) -> dict:
     return {'bedtime_std': bedtime_std, 'wake_time_std': wake_time_std}
 
 
-'''def sleep_regularity(user: User, day: int = None) -> dict:
-    """
-    Оценка регулярности сна пользователя на основе стандартного отклонения времени отхода ко сну и пробуждения
-    за последние N дней.
-    """
-    try:
-        sleep_data_interval = SleepRecord().get_last_sleep_records(user=user, days=day)
-    except SleepRecord.DoesNotExist:
-        return {}
-
-    bedtimes = [time_to_minutes(r.bedtime) for r in sleep_data_interval]
-    wake_times = [time_to_minutes(r.wake_up_time) for r in sleep_data_interval]
-
-    bedtime_std = round(np.std(bedtimes), 2) if len(bedtimes) >= 2 else 0
-    wake_time_std = round(np.std(wake_times), 2) if len(wake_times) >= 2 else 0
-
-    return {
-        'bedtime_std': bedtime_std,
-        'wake_time_std': wake_time_std
-    }'''
 
 
 def calculate_sleep_statistics_metrics(sleep_data: SleepRecord, age: np.float64, gender: int, weight: float,

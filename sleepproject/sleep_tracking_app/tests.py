@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, time
 import importlib
 import unittest
+from datetime import date
 
 import numpy as np
 
@@ -15,6 +16,13 @@ from .sleep_statistic import (
     calculate_sleep_statistics_metrics,
     avg_sleep_duration,
 )
+
+
+from django.test import RequestFactory, TestCase as DjangoTestCase
+from django.contrib.auth.models import AnonymousUser, User
+from django.contrib.sessions.middleware import SessionMiddleware
+from .views import home, register, custom_logout, profile, sleep_chronotype, sleep_fragmentation
+from .models import UserData
 
 
 class DummySegments:
@@ -159,6 +167,85 @@ class CalculateSleepStatisticTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class ViewsTests(DjangoTestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+        # create a user and related UserData
+        self.user = User.objects.create_user(username='viewuser', password='viewpass123', email='a@b.com', first_name='A', last_name='B')
+        UserData.objects.create(user=self.user, date_of_birth=date.today() - timedelta(days=365 * 30), weight=70, gender=1, height=175, active=False)
+
+    def _add_session(self, request):
+        # SessionMiddleware requires a get_response callable in newer Django versions
+        middleware = SessionMiddleware(get_response=lambda req: None)
+        middleware.process_request(request)
+        request.session.save()
+
+    def test_home_redirects_when_anonymous(self):
+        request = self.factory.get('/')
+        request.user = AnonymousUser()
+        response = home(request)
+        self.assertEqual(response.status_code, 302)
+
+    def test_home_authenticated(self):
+        request = self.factory.get('/')
+        self._add_session(request)
+        request.user = self.user
+        response = home(request)
+        self.assertEqual(response.status_code, 200)
+
+    def test_profile_renders(self):
+        request = self.factory.get('/profile')
+        self._add_session(request)
+        request.user = self.user
+        response = profile(request)
+        self.assertEqual(response.status_code, 200)
+
+    def test_register_post_creates_user_and_userdata(self):
+        # prepare valid registration + userdata form data
+        dob = date.today().isoformat()
+        data = {
+            'username': 'newuser',
+            'first_name': 'First',
+            'last_name': 'Last',
+            'email': 'new@user.test',
+            'password1': 'strong-password-1',
+            'password2': 'strong-password-1',
+            'date_of_birth': dob,
+            'weight': '68',
+            'gender': '1',
+            'height': '175',
+            'active': ''
+        }
+        request = self.factory.post('/register', data)
+        self._add_session(request)
+        response = register(request)
+        # successful registration should redirect
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(User.objects.filter(username='newuser').exists())
+        self.assertTrue(UserData.objects.filter(user__username='newuser').exists())
+
+    def test_logout_redirects(self):
+        request = self.factory.get('/logout')
+        self._add_session(request)
+        request.user = self.user
+        response = custom_logout(request)
+        self.assertEqual(response.status_code, 302)
+
+    def test_simple_statics_render(self):
+        # chronotype and fragmentation views are simple renders
+        req1 = self.factory.get('/chronotype')
+        self._add_session(req1)
+        req1.user = self.user
+        resp1 = sleep_chronotype(req1)
+        self.assertEqual(resp1.status_code, 200)
+
+        req2 = self.factory.get('/fragment')
+        self._add_session(req2)
+        req2.user = self.user
+        resp2 = sleep_fragmentation(req2)
+        self.assertEqual(resp2.status_code, 200)
 
 
 

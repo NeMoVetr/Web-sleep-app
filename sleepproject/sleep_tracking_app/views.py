@@ -202,11 +202,8 @@ def sleep_statistics_show(request: HttpRequest) -> HttpResponse:
             sleep_record_id=last_record.id
         )
         task_id = task.id
-    elif sleep_statistics is None:
-        print("Брат, все пошло по пизде")
-        rec = None
     else:
-        rec = sleep_statistics.recommended
+        rec = sleep_statistics.recommended if sleep_statistics else None
 
     # Пагинация
     page_size = int(request.GET.get('page_size', 7))

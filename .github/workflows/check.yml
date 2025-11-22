@@ -2,21 +2,42 @@ name: Check
 on: push
 jobs:
     lint:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v5
+      runs-on: ubuntu-latest
+      steps:
+          - name: Checkout
+            uses: actions/checkout@v5
 
-            - name: Setup Python
-              uses: actions/setup-python@v6
-              with:
-                python-version: '3.12'
+          - name: Setup Python
+            uses: actions/setup-python@v6
+            with:
+              python-version: '3.12'
+          
+          - name: Install Poetry
+            run: pip install poetry
             
-            - name: Install Poetry
-              run: pip install poetry
-              
-            - name: Install dependencies
-              run: poetry install
-              
-            - name: Lint
-              run: poetry run python -m pylint --fail-under=3.0 sleepproject/sleep_tracking_app/
+          - name: Install dependencies
+            run: poetry install
+            
+          - name: Lint
+            run: poetry run python -m pylint --fail-under=3.0 sleepproject/sleep_tracking_app/
+
+    test:
+      needs: [lint]
+      runs-on: ubuntu-latest
+      steps:
+        - name: Checkout
+          uses: actions/checkout@v5
+
+        - name: Setup Python
+          uses: actions/setup-python@v6
+          with:
+            python-version: '3.12'
+        
+        - name: Install Poetry
+          run: pip install poetry
+          
+        - name: Install dependencies
+          run: poetry install
+
+        - name: Test
+          run: python sleepproject/manage.py test sleep_tracking_app

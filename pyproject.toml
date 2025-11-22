@@ -92,7 +92,8 @@ dependencies = [
     "django-cursor-pagination (>=0.3.0,<0.4.0)",
     "django-redis (>=6.0.0,<7.0.0)",
     "gunicorn (>=23.0.0,<24.0.0)",
-    "pylint (>=4.0.3,<5.0.0)"
+    "pylint (>=4.0.3,<5.0.0)",
+    "pytest (>=9.0.1,<10.0.0)"
 ]
 
 

@@ -40,4 +40,4 @@ jobs:
           run: poetry install
 
         - name: Test
-          run: python sleepproject/manage.py test sleep_tracking_app
+          run: poetry run python sleepproject/manage.py test sleep_tracking_app

@@ -48,3 +48,8 @@ celery -A sleepproject worker -l info -P solo
 
 
 Кеширование: https://dizballanze.com/ru/django-project-optimization-part-2
+
+
+
+после билд основного докера и запуска loki докера нужно прописать команду в терминале:
+docker plugin install grafana/loki-docker-driver:latest --alias loki --grant-all-permissions

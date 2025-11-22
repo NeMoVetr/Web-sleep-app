@@ -4,7 +4,6 @@ from typing import Optional
 import uuid
 
 from cursor_pagination import CursorPaginator
-from django.db.models import Prefetch
 
 from django.views.decorators.cache import cache_page
 from django.contrib import messages
@@ -27,7 +26,7 @@ from .calculations import calculate_sleep_statistics
 
 from .forms import SleepRecordForm, UserRegistrationForm, UserDataForm, UserInfoUpdateForm, UpdateSleepRecordForm, \
     CSVImportForm
-from .models import SleepRecord, SleepStatistics, UserData, NightHeartRateEntry, SleepSegment
+from .models import SleepRecord, SleepStatistics, UserData
 
 # Create your views here.
 # python-benedict
@@ -203,6 +202,9 @@ def sleep_statistics_show(request: HttpRequest) -> HttpResponse:
             sleep_record_id=last_record.id
         )
         task_id = task.id
+    elif sleep_statistics is None:
+        print("Брат, все пошло по пизде")
+        rec = None
     else:
         rec = sleep_statistics.recommended
 

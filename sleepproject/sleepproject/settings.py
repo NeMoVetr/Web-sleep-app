@@ -34,6 +34,7 @@ ALLOWED_HOSTS = [
     '127.0.0.1',
     '192.168.1.47',
     'localhost',
+    'web',
 ]
 
 # Application definition
@@ -103,7 +104,7 @@ DATABASES = {
         'NAME': os.getenv("BD_NAME"),
         'USER': os.getenv("BD_USER"),
         'PASSWORD': os.getenv("BD_PASSWORD"),
-        'HOST': 'localhost',
+        'HOST': 'db',
         'PORT': '5432',
         'CONN_MAX_AGE': 60 * 10,  # 10 minutes
     }
@@ -141,12 +142,14 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, "sleep_tracking_app", "static"),
-]
+STATIC_ROOT = Path(os.environ.get("STATIC_ROOT", "/app/static"))
+#STATICFILES_DIRS = [
+#    os.path.join(BASE_DIR, "sleep_tracking_app", "static"),
+#]
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+#MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_ROOT = Path(os.environ.get("MEDIA_ROOT", "/app/media"))
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
@@ -175,10 +178,15 @@ CELERY_RESULT_SERIALIZER = 'json'
 
 LOGIN_REDIRECT_URL = reverse_lazy('home')
 
+OLLAMA_URL = os.getenv('OLLAMA_URL', 'http://ollama:11434')
+LOKI_URL = os.getenv('LOKI_URL', 'http://loki:3100')
+PROMETHEUS_URL = os.getenv('PROMETHEUS_URL', 'http://prometheus:9090')
+GRAFANA_URL = os.getenv('GRAFANA_URL', 'http://grafana:3000')
+
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/1",
+        "LOCATION": "redis://redis:6379/1",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         }
@@ -187,6 +195,5 @@ CACHES = {
 
 
 INTERNAL_IPS = [
-
     '127.0.0.1',
 ]

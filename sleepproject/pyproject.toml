@@ -6,7 +6,7 @@ authors = [
     {name = "NeMoVetr",email = "131559606+NeMoVetr@users.noreply.github.com"}
 ]
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.12,<4"
 dependencies = [
     "amqp (>=5.3.1,<6.0.0)",
     "anyio (>=4.9.0,<5.0.0)",
@@ -84,7 +84,14 @@ dependencies = [
     "virtualenv (>=20.31.2,<21.0.0)",
     "wcwidth (>=0.2.13,<0.3.0)",
     "wget (>=3.2,<4.0)",
-    "zstandard (>=0.23.0,<0.24.0)"
+    "zstandard (>=0.25.0,<0.26.0)",
+    "celery-progress (>=0.5,<0.6)",
+    "django-dragndrop-related (>=0.3.1,<0.4.0)",
+    "django-debug-toolbar (>=6.1.0,<7.0.0)",
+    "psycopg[binary] (>=3.2.12,<4.0.0)",
+    "django-cursor-pagination (>=0.3.0,<0.4.0)",
+    "django-redis (>=6.0.0,<7.0.0)",
+    "gunicorn (>=23.0.0,<24.0.0)"
 ]
 
 

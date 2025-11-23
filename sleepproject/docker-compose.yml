@@ -38,6 +38,7 @@ services:
       sh -c "celery -A sleepproject worker --loglevel=info"
     volumes:
       - .:/app
+      - media_volume:/app/media
     env_file:
       - .env
     depends_on:

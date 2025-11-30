@@ -16,10 +16,12 @@ jobs:
             run: pip install poetry
             
           - name: Install dependencies
+            working-directory: ./sleepproject
             run: poetry install
             
           - name: Lint
-            run: poetry run python -m pylint --fail-under=3.0 sleepproject/sleep_tracking_app/
+            working-directory: ./sleepproject
+            run: poetry run python -m pylint --fail-under=3.0 sleep_tracking_app/
 
     test:
       needs: [lint]
@@ -37,7 +39,9 @@ jobs:
           run: pip install poetry
           
         - name: Install dependencies
+          working-directory: ./sleepproject
           run: poetry install
 
         - name: Test
-          run: poetry run python sleepproject/manage.py test sleep_tracking_app
+          working-directory: ./sleepproject
+          run: poetry run python manage.py test sleep_tracking_app

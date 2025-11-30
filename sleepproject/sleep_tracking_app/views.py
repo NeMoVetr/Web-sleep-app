@@ -6,12 +6,11 @@ import uuid
 from cursor_pagination import CursorPaginator
 
 from django.views.decorators.cache import cache_page
-from django.contrib import messages
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import PasswordResetConfirmView, PasswordResetCompleteView, PasswordResetView
 from django.http import HttpRequest, HttpResponse, JsonResponse
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy
 from django.views.generic import TemplateView
 from django.utils import timezone
@@ -22,9 +21,8 @@ from .sleep_statistic import get_sleep_phases_pie_data, get_heart_rate_bell_curv
 
 from .tasks import import_sleep_records, sleep_recommended
 from sleepproject.settings import MEDIA_ROOT
-from .calculations import calculate_sleep_statistics
 
-from .forms import SleepRecordForm, UserRegistrationForm, UserDataForm, UserInfoUpdateForm, UpdateSleepRecordForm, \
+from .forms import UserRegistrationForm, UserDataForm, UserInfoUpdateForm, \
     CSVImportForm
 from .models import SleepRecord, SleepStatistics, UserData
 
@@ -62,35 +60,6 @@ def custom_logout(request: HttpRequest) -> HttpResponse:
     logout(request)
     # Перенаправление на главную страницу
     return redirect('home')
-
-
-@login_required
-def add_users_sleep_data(request: HttpRequest) -> HttpResponse:
-    user = request.user
-
-    sleep_data_exists = SleepRecord.objects.filter(user=user, sleep_date_time=today).exists()
-
-    if request.method == 'POST':
-        form = SleepRecordForm(request.POST)
-        if form.is_valid():
-            sleep_deep_duration = form.cleaned_data['sleep_deep_duration']
-            sleep_light_duration = form.cleaned_data['sleep_light_duration']
-            total_time_bed = form.cleaned_data['total_time_bed']
-            if (sleep_deep_duration + sleep_light_duration) <= total_time_bed:
-                sleep_data = form.save(commit=False)
-                sleep_data.user = user
-                sleep_data.sleep_date_time = today
-                sleep_data.save()
-                return redirect('sleep_statistics_show')
-            else:
-                messages.warning(request,
-                                 'Сумма глубокого и быстрого сна должна быть меньше или равна общему времени в кровати.')
-                return redirect('add_users_sleep_data')
-    else:
-        form = SleepRecordForm()
-
-    return render(request, 'add_users_sleep_data.html',
-                  {'form': form, 'sleep_data_exists': sleep_data_exists})
 
 
 @login_required
@@ -133,34 +102,6 @@ def profile(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
-def sleep_record_update(request: HttpRequest) -> HttpResponse:
-    user = request.user
-    user_data = UserData.objects.get(user=user)
-    if request.method == 'POST':
-        form = UpdateSleepRecordForm(user, request.POST)
-        if form.is_valid():
-            selected_date = form.cleaned_data['data_sleep']
-            sleep_deep_duration = form.cleaned_data['sleep_deep_duration']
-            sleep_light_duration = form.cleaned_data['sleep_light_duration']
-            total_time_bed = form.cleaned_data['total_time_bed']
-            if (sleep_deep_duration + sleep_light_duration) <= total_time_bed:
-                sleep_record = SleepRecord.objects.filter(user=user, sleep_time=selected_date).first()
-                form = UpdateSleepRecordForm(user, request.POST, instance=sleep_record)
-                if form.is_valid():
-                    form.save()
-                    calculate_sleep_statistics(user=user, user_data=user_data, update=selected_date)
-                    return redirect('sleep_statistics_show')
-            else:
-                messages.warning(request,
-                                 'Сумма глубокого и быстрого сна должна быть меньше или равна общему времени в кровати.')
-                return redirect('sleep_record_update')
-    else:
-        form = UpdateSleepRecordForm(user)
-
-    return render(request, 'update_sleep_record.html', {'form': form})
-
-
-@login_required
 def sleep_records_from_csv(request: HttpRequest) -> HttpResponse:
     if request.method == 'POST':
         csv_file = request.FILES['csv_file']
@@ -178,12 +119,14 @@ def sleep_records_from_csv(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
-@cache_page(60*15)
+@cache_page(60 * 15)
 def sleep_statistics_show(request: HttpRequest) -> HttpResponse:
     user = request.user
-    user_data = UserData.objects.get(user=user)
+    user_data = get_object_or_404(UserData, user=request.user)
 
-    sleep_statistics = SleepStatistics.objects.only('id', 'user','recommended','sleep_calories_burned', 'sleep_efficiency', 'sleep_phases').filter(user=user).order_by('-date').first()
+    sleep_statistics = SleepStatistics.objects.only('id', 'user', 'recommended', 'sleep_calories_burned',
+                                                    'sleep_efficiency', 'sleep_phases').filter(user=user).order_by(
+        '-date').first()
 
     # Получаем записи сна за 7 дней с сортировкой по убыванию даты
     sleep_records = list(SleepRecord.get_last_sleep_records(user=user))
@@ -192,7 +135,6 @@ def sleep_statistics_show(request: HttpRequest) -> HttpResponse:
 
     rec = None
     task_id = None
-
 
     if sleep_statistics and not sleep_statistics.recommended and not request.GET.get("poll"):
         # Создаём задачу Celery, если ещё нет рекомендации
@@ -285,7 +227,7 @@ def sleep_statistics_show(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
-@cache_page(60*15)
+@cache_page(60 * 15)
 def sleep_history(request: HttpRequest) -> HttpResponse:
     user = request.user
 

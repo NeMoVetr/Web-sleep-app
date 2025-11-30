@@ -42,8 +42,10 @@ jobs:
           working-directory: ./sleepproject
           run: poetry install
 
-        - name: Test
+        - name: Run tests
           working-directory: ./sleepproject
           env:
             DJANGO_SETTINGS_MODULE: sleepproject.settings_ci
-          run: poetry run python manage.py test sleep_tracking_app
+            PYTHONWARNINGS: ignore
+          run: poetry run python manage.py test sleep_tracking_app --verbosity=2
+

@@ -35,12 +35,15 @@ CELERY_TASK_EAGER_PROPAGATES = True
 CELERY_BROKER_URL = 'memory://'
 CELERY_RESULT_BACKEND = 'cache+memory://'
 
+# ===== СЕССИИ =====
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+
 # ===== УСКОРЕНИЕ ТЕСТОВ =====
 PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.MD5PasswordHasher',
 ]
 
-# Отключаем миграции
+# ===== ОТКЛЮЧАЕМ МИГРАЦИИ =====
 class DisableMigrations:
     def __contains__(self, item):
         return True
@@ -49,7 +52,8 @@ class DisableMigrations:
 
 MIGRATION_MODULES = DisableMigrations()
 
-# ===== ОТКЛЮЧАЕМ РЕДИС-ЗАВИСИМЫЕ МОДУЛИ =====
-# Убедитесь что эти переменные перезаписывают main settings
-if 'django_redis' in INSTALLED_APPS or hasattr(settings, 'SESSION_ENGINE'):
-    SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+# ===== ОТКЛЮЧАЕМ ЛОГИРОВАНИЕ В ТЕСТАХ =====
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': True,
+}

@@ -86,13 +86,21 @@ class ExtendedViewTests(TestCase):
     def test_sleep_statistics_show_template_used(self):
         """Test that the correct template is used for sleep statistics"""
         self.client.login(username='testuser', password='testpass123')
-        response = self.client.get(reverse('sleep_statistics_show'))
+        
+        # Мокируем GigaChat API для избежания сетевых запросов
+        with patch('sleep_tracking_app.tasks.sleep_recommended.delay') as mock_task:
+            mock_task.return_value = MagicMock(id='test-task-id')
+            response = self.client.get(reverse('sleep_statistics_show'))
         
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'sleep_statistic/sleep_statistics_show.html')
 
-    def test_sleep_statistics_show_context_data(self):
+    @patch('sleep_tracking_app.tasks.sleep_recommended.delay')
+    def test_sleep_statistics_show_context_data(self, mock_task):
         """Test that the view passes the correct context data"""
+        # Мокируем Celery task
+        mock_task.return_value = MagicMock(id='test-task-id')
+        
         self.client.login(username='testuser', password='testpass123')
         self._safe_cache_clear()
         
@@ -105,8 +113,11 @@ class ExtendedViewTests(TestCase):
         self.assertIn('page', response.context)  # страница с SleepRecord
         self.assertIn('rec', response.context)  # последний record
 
-    def test_sleep_statistics_show_no_data(self):
+    @patch('sleep_tracking_app.tasks.sleep_recommended.delay')
+    def test_sleep_statistics_show_no_data(self, mock_task):
         """Test the view when no sleep data exists"""
+        mock_task.return_value = MagicMock(id='test-task-id')
+        
         # Delete existing data
         SleepRecord.objects.all().delete()
         SleepStatistics.objects.all().delete()
@@ -120,8 +131,11 @@ class ExtendedViewTests(TestCase):
         self.assertIsNone(response.context.get('sleep_statistics'))
         self.assertIsNone(response.context.get('last_record'))
 
-    def test_sleep_statistics_context_has_user_data(self):
+    @patch('sleep_tracking_app.tasks.sleep_recommended.delay')
+    def test_sleep_statistics_context_has_user_data(self, mock_task):
         """Test that context includes user data"""
+        mock_task.return_value = MagicMock(id='test-task-id')
+        
         self.client.login(username='testuser', password='testpass123')
         response = self.client.get(reverse('sleep_statistics_show'))
         
@@ -129,8 +143,11 @@ class ExtendedViewTests(TestCase):
         self.assertIn('user', response.context)
         self.assertEqual(response.context['user'], self.user)
 
-    def test_sleep_statistics_shows_latest_record(self):
+    @patch('sleep_tracking_app.tasks.sleep_recommended.delay')
+    def test_sleep_statistics_shows_latest_record(self, mock_task):
         """Test that the view shows the latest sleep record"""
+        mock_task.return_value = MagicMock(id='test-task-id')
+        
         self.client.login(username='testuser', password='testpass123')
         response = self.client.get(reverse('sleep_statistics_show'))
         
@@ -140,13 +157,13 @@ class ExtendedViewTests(TestCase):
         if response.context.get('rec'):
             self.assertEqual(response.context['rec'].id, self.sleep_record.id)
 
-    @patch('sleep_tracking_app.views.cache')
-    def test_sleep_statistics_with_mocked_cache(self, mock_cache):
+    @patch('sleep_tracking_app.tasks.sleep_recommended.delay')
+    @patch('django.core.cache.cache.clear')
+    def test_sleep_statistics_with_mocked_cache(self, mock_cache_clear, mock_task):
         """Test that cache operations don't break the view"""
         # Mock cache.clear to avoid Redis connection
-        mock_cache.clear.return_value = None
-        mock_cache.get.return_value = None
-        mock_cache.set.return_value = None
+        mock_cache_clear.return_value = None
+        mock_task.return_value = MagicMock(id='test-task-id')
         
         self.client.login(username='testuser', password='testpass123')
         response = self.client.get(reverse('sleep_statistics_show'))

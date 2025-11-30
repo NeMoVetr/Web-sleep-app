@@ -45,5 +45,5 @@ jobs:
         - name: Test
           working-directory: ./sleepproject
           env:
-            DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+            DJANGO_SETTINGS_MODULE: sleepproject.settings_ci
           run: poetry run python manage.py test sleep_tracking_app

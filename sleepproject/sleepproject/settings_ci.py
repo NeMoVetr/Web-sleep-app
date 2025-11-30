@@ -42,22 +42,25 @@ PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.MD5PasswordHasher',
 ]
 
-# ===== ПРАВИЛЬНОЕ ОТКЛЮЧЕНИЕ МИГРАЦИЙ =====
-class DisableMigrations(dict):
-    """Dict-like object that disables migrations"""
-    def __missing__(self, key):
-        return None
+# ===== МИГРАЦИИ =====
+MIGRATION_MODULES = {}
 
-MIGRATION_MODULES = DisableMigrations()
+# ===== DEBUG И ЛОГИРОВАНИЕ =====
+DEBUG = False
 
-# ===== ОТКЛЮЧАЕМ ЛОГИРОВАНИЕ В ТЕСТАХ =====
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': True,
 }
 
-# ===== ОТКЛЮЧАЕМ DEBUG_TOOLBAR ПОЛНОСТЬЮ =====
-DEBUG = False
+# ===== ОТКЛЮЧАЕМ DEBUG_TOOLBAR =====
 DEBUG_TOOLBAR_CONFIG = {
+    'IS_RUNNING_TESTS': True,
     'SHOW_TOOLBAR_CALLBACK': lambda r: False,
 }
+
+# Фильтруем Debug Toolbar из INSTALLED_APPS
+INSTALLED_APPS = [app for app in INSTALLED_APPS if 'debug_toolbar' not in app]
+
+# Фильтруем Debug Toolbar middleware
+MIDDLEWARE = [m for m in MIDDLEWARE if 'debug_toolbar' not in m]

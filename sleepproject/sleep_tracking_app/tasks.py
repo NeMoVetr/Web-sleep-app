@@ -13,8 +13,8 @@ from django.db import transaction
 from .csv_data_extraction import sleep_record_from_csv
 from .models import SleepRecord, SleepSegment, NightHeartRateEntry, SleepStatistics, UserData
 
-from .sleep_statistic import calculate_sleep_statistics_metrics, get_rec_to_prompt
-
+from .sleep_statistic import calculate_sleep_statistics_metrics
+from .prompts import get_sleep_recommendation
 
 @shared_task(bind=True, name='import_sleep_records_task')
 def import_sleep_records(self, user_id: int, csv_path: str):
@@ -141,7 +141,7 @@ def sleep_recommended(user_data_id: int, sleep_record_id: int, sleep_statistics_
     sleep_record = SleepRecord.objects.only('id','duration','sleep_rem_duration', 'sleep_deep_duration', 'sleep_rem_duration', 'sleep_light_duration').get(id=sleep_record_id)
     sleep_statistics = SleepStatistics.objects.only('id','sleep_efficiency', 'sleep_fragmentation_index', 'latency_minutes', 'sleep_calories_burned', 'recommended').get(id=sleep_statistics_id)
 
-    rec = get_rec_to_prompt(user_data, sleep_statistics, sleep_record)
+    rec = get_sleep_recommendation(user_data, sleep_statistics, sleep_record)
     sleep_statistics.recommended = rec
     sleep_statistics.save(update_fields=['recommended'])
     return rec

@@ -1,256 +1,267 @@
-# Sleep Tracking Application
+# Приложение для отслеживания сна
 
-## Overview
-This is a comprehensive sleep tracking and analysis web application built with Django. The application allows users to track their sleep patterns, analyze sleep quality, and receive personalized recommendations for improving sleep hygiene.
+## Обзор
+Это комплексное веб-приложение для отслеживания и анализа сна, разработанное на Django. Приложение позволяет пользователям отслеживать свои режимы сна, анализировать качество сна и получать персонализированные рекомендации по улучшению гигиены сна.
 
-## Features
+## Возможности
 
-### User Management
-- User registration and authentication
-- Profile management with personal details (age, weight, height, gender)
-- Password reset functionality
+### Управление пользователями
+- Регистрация и аутентификация пользователей
+- Управление профилем с персональными данными (возраст, вес, рост, пол)
+- Функция сброса пароля
 
-### Sleep Tracking
-- Manual sleep data entry
-- Bulk import of sleep data from CSV files
-- Automatic sleep phase detection and analysis
-- Sleep duration and quality metrics
-- Heart rate monitoring during sleep
+### Отслеживание сна
+- Ручной ввод данных о сне
+- Массовый импорт данных о сне из CSV-файлов
+- Автоматическое определение и анализ фаз сна
+- Метрики продолжительности и качества сна
+- Мониторинг частоты сердечных сокращений во время сна
 
-### Sleep Analysis
-- Sleep efficiency calculation
-- Sleep phase distribution (light, deep, REM, awake)
-- Sleep fragmentation index
-- Calorie burn estimation during sleep
-- Chronotype assessment (morning/evening person)
-- Sleep regularity scoring
+### Анализ сна
+- Расчет эффективности сна
+- Распределение фаз сна (легкий, глубокий, БДГ, бодрствование)
+- Индекс фрагментации сна
+- Оценка расхода калорий во время сна
+- Определение хронотипа (жаворонок/сова)
+- Оценка регулярности сна
 
-### Data Visualization
-- Interactive charts for sleep trends
-- Sleep phase distribution pie charts
-- Heart rate variability analysis
-- Sleep duration and efficiency trends over time
+### Визуализация данных
+- Интерактивные графики трендов сна
+- Круговые диаграммы распределения фаз сна
+- Анализ вариабельности сердечного ритма
+- Тренды продолжительности и эффективности сна за период
 
-## Technology Stack
+## Технический стек
 
-### Backend
+### Бэкенд
 - **Python 3.10+**
-- **Django 4.2.11** - Web framework
-- **Celery** - Asynchronous task queue
-- **Redis** - Message broker and cache
-- **PostgreSQL** - Database
-- **Gunicorn** - WSGI HTTP Server (for production)
+- **Django 4.2.11** - Веб-фреймворк
+- **Celery** - Асинхронная очередь задач
+- **Redis** - Брокер сообщений и кеш
+- **PostgreSQL** - База данных
+- **Gunicorn** - HTTP-сервер WSGI (для продакшена)
 
-### Frontend
+### Фронтенд
 - **HTML5, CSS3, JavaScript**
-- **Bootstrap 5** - Responsive design
-- **Chart.js** - Interactive data visualization
-- **jQuery** - DOM manipulation and AJAX
+- **Bootstrap 5** - Адаптивный дизайн
+- **Chart.js** - Интерактивная визуализация данных
+- **jQuery** - Манипуляции с DOM и AJAX
 
-### Development Tools
-- **Poetry** - Dependency management
-- **Docker** - Containerization
-- **Django Debug Toolbar** - Development debugging
-- **Black** - Code formatting
-- **isort** - Import sorting
+### Инструменты разработки
+- **Poetry** - Управление зависимостями
+- **Docker** - Контейнеризация
+- **Django Debug Toolbar** - Отладка в процессе разработки
+- **Black** - Форматирование кода
+- **isort** - Сортировка импортов
 
-## Project Structure
+## Структура проекта
 
 ```
 sleepproject/
-├── .github/                  # GitHub configurations and workflows
-├── alertmanager/             # Alertmanager configuration for monitoring
-├── grafana/                  # Grafana dashboards and configuration
-├── loki/                     # Loki logging configuration
-├── nginx/                    # Nginx web server configuration
-├── prometheus/               # Prometheus monitoring configuration
-├── sleep_tracking_app/       # Main Django application
-│   ├── migrations/           # Database migrations
-│   ├── static/               # Static files (CSS, JS, images)
-│   ├── templates/            # HTML templates
-│   ├── sleep_statistic/      # Sleep analysis and statistics logic
-│   ├── admin.py              # Admin interface configuration
-│   ├── apps.py               # App configuration
-│   ├── calculations.py       # Core calculation logic
-│   ├── csv_data_extraction.py # CSV import/export utilities
-│   ├── forms.py              # Form definitions
-│   ├── models.py             # Database models
-│   ├── tasks.py              # Celery tasks for async processing
-│   ├── tests.py              # Test cases
-│   ├── urls.py               # URL routing
-│   └── views.py              # Request handlers
-├── sleepproject/             # Project configuration
+├── .github/                  # Конфигурации и рабочие процессы GitHub
+├── .ollama_data/             # Данные и конфигурации моделей Ollama
+├── grafana/                  # Дашборды и конфигурация Grafana
+├── htmlcov/                  # Отчеты о покрытии тестами
+├── loki/                     # Конфигурация системы логирования Loki
+├── nginx/                    # Конфигурация веб-сервера Nginx
+├── prometheus/               # Конфигурация мониторинга Prometheus
+├── sleep_tracking_app/       # Основное приложение Django
+│   ├── migrations/           # Миграции базы данных
+│   ├── prompts/              # Шаблоны и конфигурации AI-промптов
+│   │   ├── __init__.py
+│   │   ├── baseline.py      # Базовые конфигурации промптов
+│   │   └── prompts_templates.py  # Шаблоны для AI-промптов
+│   ├── sleep_statistic/      # Логика анализа и статистики сна
+│   ├── static/               # Статические файлы (CSS, JS, изображения)
+│   ├── templates/            # HTML-шаблоны
+│   ├── tests/                # Директория с тестами
+│   ├── admin.py              # Конфигурация административной панели
+│   ├── apps.py               # Конфигурация приложения
+│   ├── csv_data_extraction.py # Утилиты импорта/экспорта CSV
+│   ├── forms.py              # Определения форм
+│   ├── models.py             # Модели базы данных
+│   ├── tasks.py              # Асинхронные задачи Celery
+│   ├── urls.py               # Маршрутизация URL
+│   └── views.py              # Обработчики запросов
+├── sleepproject/             # Конфигурация проекта
 │   ├── __init__.py
-│   ├── asgi.py              # ASGI configuration
-│   ├── settings.py          # Django settings
-│   ├── urls.py             # Root URL configuration
-│   └── wsgi.py             # WSGI configuration
-├── .env                     # Environment variables
+│   ├── asgi.py              # Конфигурация ASGI
+│   ├── settings.py          # Настройки Django
+│   ├── urls.py             # Корневая конфигурация URL
+│   └── wsgi.py             # Конфигурация WSGI
+├── .env                     # Переменные окружения
 ├── .gitignore
-├── docker-compose.yml       # Main Docker Compose configuration
-├── docker-compose-logging.yml # Logging services configuration
-├── docker-compose-monitoring.yml # Monitoring services configuration
-├── Dockerfile               # Docker configuration for the web application
-├── manage.py                # Django management script
-├── poetry.lock             # Poetry lock file
-└── pyproject.toml          # Project dependencies and configuration
+├── .coverage               # Данные о покрытии тестами
+├── celerybeat-schedule.*    # Файлы расписания Celery Beat
+├── docker-compose.yml       # Основная конфигурация Docker Compose
+├── Dockerfile               # Конфигурация Docker для веб-приложения
+├── manage.py                # Скрипт управления Django
+├── poetry.lock             # Файл блокировки Poetry
+└── pyproject.toml          # Зависимости и конфигурация проекта
 ```
 
-### Key Components:
+### Ключевые компоненты:
 
-- **Docker & Docker Compose**: Containerization and orchestration
-- **Celery**: Asynchronous task queue
-- **Redis**: Caching and message broker for Celery
-- **Nginx**: Web server and reverse proxy
-- **Monitoring Stack**:
-  - Prometheus: Metrics collection and monitoring
-  - Grafana: Visualization dashboards
-  - Loki: Log aggregation
-  - Alertmanager: Alert management
-- **Django**: Web framework
-- **PostgreSQL**: Primary database (configured in docker-compose)
+- **Docker & Docker Compose**: Контейнеризация и оркестрация
+- **Celery**: Асинхронная очередь задач
+- **Redis**: Кеширование и брокер сообщений для Celery
+- **Nginx**: Веб-сервер и обратный прокси
+- **Стек мониторинга**:
+  - Prometheus: Сбор и мониторинг метрик
+  - Grafana: Визуализация данных
+  - Loki: Агрегация логов
+  - Alertmanager: Управление оповещениями
+- **Django**: Веб-фреймворк
+- **PostgreSQL**: Основная база данных (настраивается в docker-compose)
 
-## Data Models
+## Модели данных
 
 ### UserData
-Stores additional user information:
-- Date of birth
-- Weight and height
-- Gender
-- Activity status
+Хранит дополнительную информацию о пользователе:
+- Дата рождения
+- Вес и рост
+- Пол
+- Уровень активности
 
 ### SleepRecord
-Tracks individual sleep sessions:
-- Sleep start and end times
-- Sleep phases duration (light, deep, REM)
-- Heart rate metrics
-- Awake periods
-- Device-specific data
+Отслеживает отдельные сеансы сна:
+- Время начала и окончания сна
+- Продолжительность фаз сна (легкий, глубокий, БДГ)
+- Показатели частоты сердечных сокращений
+- Периоды бодрствования
+- Данные с устройств
 
 ### SleepStatistics
-Aggregated sleep analysis:
-- Sleep efficiency
-- Sleep fragmentation index
-- Calorie burn
-- Sleep quality score
-- Health impact assessment
+Агрегированный анализ сна:
+- Эффективность сна
+- Индекс фрагментации сна
+- Расход калорий
+- Оценка качества сна
+- Оценка влияния на здоровье
 
 ### SleepSegment
-Detailed sleep phase tracking:
-- Start and end times
-- Sleep phase type (light, deep, REM, awake)
+Детальное отслеживание фаз сна:
+- Время начала и окончания
+- Тип фазы сна (легкий, глубокий, БДГ, бодрствование)
 
 ### NightHeartRateEntry
-Heart rate data during sleep:
-- Timestamp
-- Beats per minute (BPM)
+Данные о частоте сердечных сокращений во время сна:
+- Временная метка
+- Ударов в минуту (BPM)
 
-## Key Features Implementation
+## Реализация ключевых функций
 
-### Sleep Analysis
-- **Sleep Efficiency**: Calculated as (Total Sleep Time / Time in Bed) * 100
-- **Sleep Phases**: Analyzed based on movement and heart rate patterns
-- **Chronotype**: Determined using sleep midpoint and sleep duration patterns
-- **Calorie Burn**: Estimated using the Mifflin-St Jeor equation adjusted for sleep
+### Анализ сна
+- **Эффективность сна**: Рассчитывается как (Общее время сна / Время в кровати) * 100
+- **Фазы сна**: Анализируются на основе паттернов движения и частоты сердечных сокращений
+- **Хронотип**: Определяется с использованием средней точки сна и паттернов продолжительности сна
+- **Расход калорий**: Оценивается с использованием уравнения Миффлина-Сан Жеора, адаптированного для сна
 
-### Data Import
-- Supports bulk import from CSV files
-- Processes sleep data asynchronously using Celery
-- Validates and normalizes imported data
+### Импорт данных
+- Поддержка массового импорта из CSV-файлов
+- Асинхронная обработка данных о сне с использованием Celery
+- Валидация и нормализация импортированных данных
 
-### Performance Optimizations
-- Database indexing for frequent queries
-- Caching of computed statistics
-- Asynchronous task processing
-- Bulk database operations
+### Оптимизация производительности
+- Индексирование базы данных для частых запросов
+- Кеширование вычисляемой статистики
+- Асинхронная обработка задач
+- Массовые операции с базой данных
 
-## Setup Instructions
+## Инструкция по настройке
 
-### Prerequisites
+### Необходимые компоненты
 - Python 3.10+
 - PostgreSQL
 - Redis
-- Node.js (for frontend assets)
+- Node.js (для фронтенд-ресурсов)
 
-### Installation
+### Установка
 
-1. Clone the repository:
+1. Клонируйте репозиторий:
    ```bash
    git clone <repository-url>
    cd sleepproject
    ```
 
-2. Set up a virtual environment and install dependencies:
+2. Настройте виртуальное окружение и установите зависимости:
    ```bash
    poetry install
    ```
 
-3. Create a `.env` file with your configuration:
+3. Создайте файл `.env` с вашей конфигурацией:
    ```env
-   DJANGO_SECRET_KEY=your-secret-key
+   DJANGO_SECRET_KEY=ваш-секретный-ключ
    DEBUG=True
    BD_NAME=sleep_db
    BD_USER=postgres
-   BD_PASSWORD=your-password
-   CELERY_BROKER_URL=redis://localhost:6379/0
+   BD_PASSWORD=ваш-пароль
+   CELERY_BROKER_URL=
+   GEMINI_API_KEY=
+   GEMINI_MODEL=
+   LANGFUSE_PUBLIC_KEY=
+   LANGFUSE_SECRET_KEY=
+   LANGFUSE_HOST=
+   BASELINE_MAX_RETRIES=
+   BASELINE_RETRY_DELAY=
    ```
 
-4. Apply database migrations:
+4. Примените миграции базы данных:
    ```bash
    python manage.py migrate
    ```
 
-5. Start the development server:
+5. Запустите сервер разработки:
    ```bash
    python manage.py runserver
    ```
 
-6. Start Celery worker (in a separate terminal):
+6. Запустите Celery worker (в отдельном терминале):
    ```bash
    celery -A sleepproject worker -l info
    ```
 
-## Usage
+## Использование
 
-1. Register a new account or log in
-2. Complete your profile with personal details
-3. Add sleep data manually or import from a CSV file
-4. View your sleep statistics and recommendations
-5. Track your sleep patterns over time
+1. Зарегистрируйте новую учетную запись или войдите в систему
+2. Заполните свой профиль персональными данными
+3. Добавьте данные о сне вручную или импортируйте из CSV-файла
+4. Просматривайте статистику сна и рекомендации
+5. Отслеживайте свои режимы сна с течением времени
 
-## API Endpoints
+## API-эндпоинты
 
-The application provides REST API endpoints for data access (documentation available at `/api/docs/` when running locally).
+Приложение предоставляет REST API-эндпоинты для доступа к данным (документация доступна по адресу `/api/docs/` при локальном запуске).
 
-## Testing
+## Тестирование
 
-Run the test suite with:
+Запустите тесты командой:
 ```bash
 python manage.py test
 ```
 
-## Deployment
+## Развертывание
 
-For production deployment, it's recommended to use:
-- Gunicorn as the application server
-- Nginx as a reverse proxy
-- PostgreSQL as the database
-- Redis for caching and message brokering
-- Supervisor for process management
+Для продакшн-развертывания рекомендуется использовать:
+- Gunicorn в качестве сервера приложений
+- Nginx в качестве обратного прокси
+- PostgreSQL в качестве базы данных
+- Redis для кеширования и брокеринга сообщений
+- Supervisor для управления процессами
 
-## License
+## Лицензия
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+Этот проект лицензирован по лицензии MIT - подробности см. в файле [LICENSE](LICENSE).
 
-## Contributing
+## Вклад в проект
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+1. Сделайте форк репозитория
+2. Создайте ветку для вашей функции (`git checkout -b feature/AmazingFeature`)
+3. Зафиксируйте изменения (`git commit -m 'Добавлена новая функция'`)
+4. Отправьте изменения в удаленный репозиторий (`git push origin feature/AmazingFeature`)
+5. Создайте Pull Request
 
-## Acknowledgements
+## Благодарности
 - [Django](https://www.djangoproject.com/)
 - [Celery](https://docs.celeryproject.org/)
 - [Redis](https://redis.io/)

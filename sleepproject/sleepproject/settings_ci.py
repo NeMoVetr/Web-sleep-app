@@ -17,8 +17,7 @@ MEDIA_ROOT = os.path.join(TEMP_DIR, 'test_media')
 MEDIA_URL = '/media/'
 DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
 
-# ===== КЭШИРОВАНИЕ - ПЕРЕОПРЕДЕЛЯЕМ РАДИКАЛЬНО =====
-# Удаляем django-redis полностью и используем встроенный локальный кэш
+# ===== КЭШИРОВАНИЕ =====
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
@@ -43,11 +42,10 @@ PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.MD5PasswordHasher',
 ]
 
-# ===== ОТКЛЮЧАЕМ МИГРАЦИИ =====
-class DisableMigrations:
-    def __contains__(self, item):
-        return True
-    def __getitem__(self, item):
+# ===== ПРАВИЛЬНОЕ ОТКЛЮЧЕНИЕ МИГРАЦИЙ =====
+class DisableMigrations(dict):
+    """Dict-like object that disables migrations"""
+    def __missing__(self, key):
         return None
 
 MIGRATION_MODULES = DisableMigrations()
@@ -56,4 +54,10 @@ MIGRATION_MODULES = DisableMigrations()
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': True,
+}
+
+# ===== ОТКЛЮЧАЕМ DEBUG_TOOLBAR ПОЛНОСТЬЮ =====
+DEBUG = False
+DEBUG_TOOLBAR_CONFIG = {
+    'SHOW_TOOLBAR_CALLBACK': lambda r: False,
 }

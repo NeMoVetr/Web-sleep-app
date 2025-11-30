@@ -1,7 +1,8 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
-from datetime import date
-from .models import SleepRecord, UserData, User
+from datetime import date, timedelta
+from .models import UserData, User
+from django.core.exceptions import ValidationError
 
 
 
@@ -15,13 +16,20 @@ class UserDataForm(forms.ModelForm):
     weight = forms.IntegerField(min_value=10, required=True, label='Вес',
                                 widget=forms.TextInput(attrs={'placeholder': 'Введите ваш вес (кг)'}))
     gender = forms.TypedChoiceField(label='Пол', coerce=int, choices=GENDER_CHOICES)
-    height = forms.IntegerField(min_value=10, required=True, label='Рост',
+    height = forms.IntegerField(min_value=40, max_value=270, required=True, label='Рост',
                                 widget=forms.TextInput(attrs={'placeholder': 'Введите ваш рост (см)'}))
     active = forms.BooleanField(label='Подписаться на рассылку', required=False)
 
     class Meta:
         model = UserData
         fields = ['date_of_birth', 'weight', 'gender', 'height', 'active']
+
+    def clean_date_of_birth(self):
+        dob = self.cleaned_data['date_of_birth']
+        min_age_date = date.today() - timedelta(days=5 * 365)  # минимум 5 лет
+        if dob > min_age_date:
+            raise ValidationError("Пользователь должен быть старше 5 лет")
+        return dob
 
 
 class UserRegistrationForm(UserCreationForm):
@@ -44,6 +52,12 @@ class UserRegistrationForm(UserCreationForm):
             'username': 'Требуемый. не более 150 символов. Только буквы, цифры и @/./+/-/_.',
         }
 
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if User.objects.filter(email=email).exists():
+            raise forms.ValidationError("Email already exists")
+        return email
+
 
 class UserInfoUpdateForm(forms.ModelForm):
     username = forms.CharField(label='Ник', max_length=150)
@@ -60,50 +74,6 @@ class UserInfoUpdateForm(forms.ModelForm):
             'last_name': 'Фамилия',
         }
 
-
-class SleepRecordForm(forms.ModelForm):
-    sleep_deep_duration = forms.IntegerField(label='Общая продолжительность глубокой фазы сна:',
-                                             widget=forms.TextInput(attrs={'placeholder': 'Введите число в минутах'}))
-    sleep_light_duration = forms.IntegerField(label='Общая продолжительность лёгкой фазы сна:',
-                                              widget=forms.TextInput(attrs={'placeholder': 'Введите число в минутах'}))
-    total_time_bed = forms.IntegerField(label='Общее время, проведённое в кровати:',
-                                        widget=forms.TextInput(attrs={'placeholder': 'Введите число в минутах'}))
-
-    class Meta:
-        model = SleepRecord
-        fields = ['sleep_deep_duration', 'sleep_light_duration', 'total_time_bed']
-        labels = {
-            'sleep_deep_duration': 'Продолжительность глубокой фазы сна:',
-            'sleep_light_duration': 'Продолжительность лёгкой фазы сна:',
-            'total_time_bed': 'Общее время, проведённое в кровати:',
-        }
-
-
-class UpdateSleepRecordForm(forms.ModelForm):
-    def __init__(self, user, *args, **kwargs):
-        super(UpdateSleepRecordForm, self).__init__(*args, **kwargs)
-        # Filter the queryset based on the user input
-        self.fields['data_sleep'].queryset = SleepRecord.objects.filter(user=user).values_list('sleep_date_time',
-                                                                                               flat=True).distinct()
-
-    data_sleep = forms.ModelChoiceField(
-        queryset=SleepRecord.objects.values_list('sleep_date_time', flat=True).distinct(),
-        label='Дата:', to_field_name='sleep_time')
-    sleep_deep_duration = forms.IntegerField(label='Общая продолжительность глубокой фазы сна:',
-                                             widget=forms.TextInput(attrs={'placeholder': 'Введите число в минутах'}))
-    sleep_light_duration = forms.IntegerField(label='Общая продолжительность лёгкой фазы сна:',
-                                              widget=forms.TextInput(attrs={'placeholder': 'Введите число в минутах'}))
-    total_time_bed = forms.IntegerField(label='Общее время, проведённое в кровати:',
-                                        widget=forms.TextInput(attrs={'placeholder': 'Введите число в минутах'}))
-
-    class Meta:
-        model = SleepRecord
-        fields = ['data_sleep', 'sleep_deep_duration', 'sleep_light_duration', 'total_time_bed']
-        labels = {
-            'sleep_deep_duration': 'Продолжительность глубокой фазы сна:',
-            'sleep_light_duration': 'Продолжительность лёгкой фазы сна:',
-            'total_time_bed': 'Общее время, проведённое в кровати:',
-        }
 
 
 class CSVImportForm(forms.Form):

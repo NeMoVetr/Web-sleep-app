@@ -1,11 +1,11 @@
-from datetime import datetime, timedelta, time
+from datetime import datetime, timedelta
 import importlib
 import unittest
 from datetime import date
 
 import numpy as np
 
-from .sleep_statistic import (
+from sleep_tracking_app.sleep_statistic import (
     calculate_calories_burned,
     evaluate_bedtime,
     evaluate_wake_time,
@@ -21,8 +21,8 @@ from .sleep_statistic import (
 from django.test import RequestFactory, TestCase as DjangoTestCase
 from django.contrib.auth.models import AnonymousUser, User
 from django.contrib.sessions.middleware import SessionMiddleware
-from .views import home, register, custom_logout, profile, sleep_chronotype, sleep_fragmentation
-from .models import UserData
+from sleep_tracking_app.views import home, register, custom_logout, profile, sleep_chronotype, sleep_fragmentation
+from sleep_tracking_app.models import UserData
 
 
 class DummySegments:
@@ -204,7 +204,7 @@ class ViewsTests(DjangoTestCase):
 
     def test_register_post_creates_user_and_userdata(self):
         # prepare valid registration + userdata form data
-        dob = date.today().isoformat()
+        dob = (date.today() - timedelta(days=6*365)).isoformat()
         data = {
             'username': 'newuser',
             'first_name': 'First',

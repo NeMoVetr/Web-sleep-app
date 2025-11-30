@@ -1,7 +1,7 @@
 import json
 import pandas as pd
 from celery_progress.backend import ProgressRecorder
-
+from typing import Tuple
 
 def convert_to_readable_time(list_of_unix_timestamps: list, df_column: pd.DataFrame) -> None:
     """Преобразует UNIX-метку времени в читаемый формат."""
@@ -22,8 +22,7 @@ def mask_night(heart_idx: pd.Index, start: pd.Timestamp, end: pd.Timestamp) -> b
         return (heart_idx >= start) | (heart_idx < end)
 
 
-def sleep_record_from_csv(sleep_data: pd.DataFrame, progress_recorder: ProgressRecorder = None) -> (
-        pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame):
+def sleep_record_from_csv(sleep_data: pd.DataFrame, progress_recorder: ProgressRecorder = None) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
     Извлекает данные из CSV-файла, фильтруя записи сна и ночной сердечный ритм
     Возвращает кортеж (meta, items, night_hr, df_day) или None, если данные невалидны

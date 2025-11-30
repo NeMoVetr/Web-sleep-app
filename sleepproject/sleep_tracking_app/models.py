@@ -6,8 +6,9 @@ from django.db.models import QuerySet
 
 import numpy as np
 
+
 # Create your models here.
-class UserData(models.Model):
+class UserData(models.Model):  # pragma: no cover
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='user_data')
     date_of_birth = models.DateField()
     weight = models.FloatField(validators=[MinValueValidator(10)])  # Вес в кг
@@ -18,11 +19,11 @@ class UserData(models.Model):
         ),
         default=0,
     )  # Пол: 0 – женщина, 1 – мужчина
-    height = models.PositiveSmallIntegerField(validators=[MinValueValidator(10)])  # Рост в см
+    height = models.PositiveSmallIntegerField(validators=[MinValueValidator(40), MaxValueValidator(270)])  # Рост в см
 
     active = models.BooleanField(default=False)
 
-    def get_age_months(self)->np.float64:
+    def get_age_months(self) -> np.float64:
         """
         Возвращает возраст пользователя в месяцах на основе даты рождения.
         """
@@ -32,7 +33,7 @@ class UserData(models.Model):
                 date_current.month - self.date_of_birth.month))
         return age
 
-    def get_gender(self) ->str:
+    def get_gender(self) -> str:
         return 'Женский ' if self.gender == 0 else 'Мужской'
 
 
@@ -96,7 +97,8 @@ class SleepRecord(models.Model):
         относительно самой последней записи (по sleep_date_time).
         """
 
-        return cls.objects.filter(user=user).only('sleep_date_time', 'id','device_bedtime','duration', 'bedtime', 'wake_up_time', 'night_hr_entries').order_by('-sleep_date_time')[:7]
+        return cls.objects.filter(user=user).only('sleep_date_time', 'id', 'device_bedtime', 'duration', 'bedtime',
+                                                  'wake_up_time', 'night_hr_entries').order_by('-sleep_date_time')[:7]
 
     @classmethod
     def get_delta_days_sleep_records(cls, user: User) -> QuerySet:
@@ -148,8 +150,6 @@ class SleepStatistics(models.Model):
 
     recommended = models.TextField(null=True, blank=True)  # Рекомендовано ли пользователю улучшение сна
 
-
-
     sleep_duration = models.PositiveSmallIntegerField(null=True,
                                                       blank=True)  # deep_sleep_duration + fast_sleep_duration
     sleep_quality = models.FloatField(null=True, blank=True)  # Это поле генерируется на основании данных пользователя
@@ -181,4 +181,3 @@ class SleepStatistics(models.Model):
         """
 
         return cls.objects.filter(user=user).order_by('-date', 'id')
-

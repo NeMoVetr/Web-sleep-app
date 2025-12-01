@@ -38,7 +38,9 @@ ALLOWED_HOSTS = [
 ]
 
 # Application definition
-
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:8080",
+]
 
 INSTALLED_APPS = [
     'django_prometheus',
@@ -188,7 +190,7 @@ GRAFANA_URL = os.getenv('GRAFANA_URL', 'http://grafana:3000')
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://redis:6379/1",
+        "LOCATION": "redis://:pass@redis:6379/1",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         }

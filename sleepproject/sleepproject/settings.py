@@ -38,9 +38,12 @@ ALLOWED_HOSTS = [
 ]
 
 # Application definition
-
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:8080",
+]
 
 INSTALLED_APPS = [
+    'django_prometheus',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -57,6 +60,7 @@ INSTALLED_APPS = [
 SITE_ID = 1
 
 MIDDLEWARE = [
+    'django_prometheus.middleware.PrometheusBeforeMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -178,15 +182,25 @@ CELERY_RESULT_SERIALIZER = 'json'
 
 LOGIN_REDIRECT_URL = reverse_lazy('home')
 
-OLLAMA_URL = os.getenv('OLLAMA_URL', 'http://ollama:11434')
+#OLLAMA_URL = os.getenv('OLLAMA_URL', 'http://ollama:11434')
 LOKI_URL = os.getenv('LOKI_URL', 'http://loki:3100')
 PROMETHEUS_URL = os.getenv('PROMETHEUS_URL', 'http://prometheus:9090')
 GRAFANA_URL = os.getenv('GRAFANA_URL', 'http://grafana:3000')
 
+# RAG / vector & ollama settings
+QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")
+QDRANT_PORT = int(os.getenv("QDRANT_PORT", 6333))
+QDRANT_COLLECTION = os.getenv("QDRANT_COLLECTION", "sleep_research_articles")
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://ollama:11434/api/generate")
+MISTRAL_MODEL = os.getenv("MISTRAL_MODEL", "mistral:7b-instruct-q4_K_M")
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "sentence-transformers/paraphrase-albert-small-v2")
+SLEEP_ARTICLES_FOLDER = os.getenv("SLEEP_ARTICLES_FOLDER", "sleep_articles")
+
+
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://redis:6379/1",
+        "LOCATION": "redis://:pass@redis:6379/1",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         }

@@ -25,7 +25,7 @@ class TasksTests(TestCase):
         )
         self.stat = SleepStatistics.objects.create(user=self.user, date=self.record.sleep_date_time.date(), latency_minutes=10, sleep_efficiency=95.0, sleep_phases={'deep':90}, sleep_fragmentation_index=0.1, sleep_calories_burned=200)
 
-    @patch('sleep_tracking_app.tasks.get_rec_to_prompt')
+    @patch('sleep_tracking_app.tasks.get_sleep_recommendation')
     def test_sleep_recommended_updates_sleepstatistics(self, mock_get):
         mock_get.return_value = 'Keep regular schedule and avoid caffeine.'
         # call task function directly

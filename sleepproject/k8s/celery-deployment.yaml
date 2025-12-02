@@ -18,8 +18,8 @@ spec:
     spec:
       containers:
         - name: celery
-          image: sleepproject-celery:v1
-          imagePullPolicy: IfNotPresent
+          image: sleepproject-celery:v2
+          imagePullPolicy: Never
           workingDir: /app
           command: ["sh", "-c", "celery -A sleepproject worker --loglevel=info"]
           envFrom:

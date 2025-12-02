@@ -28,12 +28,12 @@ spec:
           envFrom:
             - configMapRef:
                 name: env
-          image: sleepproject-web:v3
+          image: sleepproject-web:v4
           name: web
           envFrom:
             - secretRef:
                 name: app-env
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Never
           volumeMounts:
             - name: static-volume
               mountPath: /app/static

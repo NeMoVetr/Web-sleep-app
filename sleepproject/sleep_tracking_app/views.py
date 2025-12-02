@@ -119,7 +119,6 @@ def sleep_records_from_csv(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
-@cache_page(60 * 15)
 def sleep_statistics_show(request: HttpRequest) -> HttpResponse:
     user = request.user
     user_data = get_object_or_404(UserData, user=request.user)

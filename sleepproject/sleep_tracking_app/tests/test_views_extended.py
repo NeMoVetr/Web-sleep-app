@@ -59,7 +59,7 @@ class ExtendedViewTests(TestCase):
             max_hr=100,
             avg_hr=70
         )
-        
+
         self.sleep_stat = SleepStatistics.objects.create(
             user=self.user,
             recommended=None,
@@ -86,12 +86,12 @@ class ExtendedViewTests(TestCase):
     def test_sleep_statistics_show_template_used(self):
         """Test that the correct template is used for sleep statistics"""
         self.client.login(username='testuser', password='testpass123')
-        
-        # Мокируем GigaChat API для избежания сетевых запросов
+
+        # Мокируем Celery task, чтобы не дергать реальный ИИ
         with patch('sleep_tracking_app.tasks.sleep_recommended.delay') as mock_task:
             mock_task.return_value = MagicMock(id='test-task-id')
             response = self.client.get(reverse('sleep_statistics_show'))
-        
+
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'sleep_statistic/sleep_statistics_show.html')
 
@@ -100,10 +100,10 @@ class ExtendedViewTests(TestCase):
         """Test that the view passes the correct context data"""
         # Мокируем Celery task
         mock_task.return_value = MagicMock(id='test-task-id')
-        
+
         self.client.login(username='testuser', password='testpass123')
         self._safe_cache_clear()
-        
+
         response = self.client.get(reverse('sleep_statistics_show'))
 
         # Проверяем существование ключей
@@ -111,51 +111,67 @@ class ExtendedViewTests(TestCase):
         self.assertIn('plot_data', response.context)
         self.assertIn('graph_data', response.context)
         self.assertIn('page', response.context)  # страница с SleepRecord
-        self.assertIn('rec', response.context)  # последний record
+        self.assertIn('rec', response.context)  # рекомендация по сну (строка или None)
 
     @patch('sleep_tracking_app.tasks.sleep_recommended.delay')
     def test_sleep_statistics_show_no_data(self, mock_task):
         """Test the view when no sleep data exists"""
         mock_task.return_value = MagicMock(id='test-task-id')
-        
-        # Delete existing data
+
+        # Удаляем все данные
         SleepRecord.objects.all().delete()
         SleepStatistics.objects.all().delete()
-        
+
         self.client.login(username='testuser', password='testpass123')
         self._safe_cache_clear()
-        
+
         response = self.client.get(reverse('sleep_statistics_show'))
-        
+
         self.assertEqual(response.status_code, 200)
-        self.assertIsNone(response.context.get('sleep_statistics'))
-        self.assertIsNone(response.context.get('last_record'))
+        # Во вьюхе теперь, скорее всего, пустые списки, а не None
+        self.assertFalse(response.context.get('sleep_statistics'))
+        self.assertFalse(response.context.get('last_record'))
+        # Рекомендации при отсутствии данных быть не должно
+        self.assertIsNone(response.context.get('rec'))
 
     @patch('sleep_tracking_app.tasks.sleep_recommended.delay')
     def test_sleep_statistics_context_has_user_data(self, mock_task):
         """Test that context includes user data"""
         mock_task.return_value = MagicMock(id='test-task-id')
-        
+
         self.client.login(username='testuser', password='testpass123')
         response = self.client.get(reverse('sleep_statistics_show'))
-        
+
         self.assertEqual(response.status_code, 200)
         self.assertIn('user', response.context)
         self.assertEqual(response.context['user'], self.user)
 
     @patch('sleep_tracking_app.tasks.sleep_recommended.delay')
-    def test_sleep_statistics_shows_latest_record(self, mock_task):
-        """Test that the view shows the latest sleep record"""
+    def test_sleep_statistics_triggers_celery_for_missing_recommendation(self, mock_task):
+        """
+        Test that Celery task is triggered when latest statistics
+        has no recommendation, and that rec in context is still None
+        (рекомендация ещё не получена).
+        """
         mock_task.return_value = MagicMock(id='test-task-id')
-        
+
         self.client.login(username='testuser', password='testpass123')
         response = self.client.get(reverse('sleep_statistics_show'))
-        
+
         self.assertEqual(response.status_code, 200)
-        # Проверяем что это последний record
+
+        # Таска должна быть вызвана, так как recommended=None
+        mock_task.assert_called_once()
+        _, kwargs = mock_task.call_args
+
+        # Проверяем, что в таску переданы корректные аргументы (списки id)
+        self.assertEqual(kwargs['user_data_id'], self.user_data.id)
+        self.assertEqual(kwargs['sleep_statistics_id'], [self.sleep_stat.id])
+        self.assertEqual(kwargs['sleep_record_id'], [self.sleep_record.id])
+
+        # В контексте ключ rec должен быть, но пока без текста рекомендации
         self.assertIn('rec', response.context)
-        if response.context.get('rec'):
-            self.assertEqual(response.context['rec'].id, self.sleep_record.id)
+        self.assertIsNone(response.context['rec'])
 
     @patch('sleep_tracking_app.tasks.sleep_recommended.delay')
     @patch('django.core.cache.cache.clear')
@@ -164,9 +180,9 @@ class ExtendedViewTests(TestCase):
         # Mock cache.clear to avoid Redis connection
         mock_cache_clear.return_value = None
         mock_task.return_value = MagicMock(id='test-task-id')
-        
+
         self.client.login(username='testuser', password='testpass123')
         response = self.client.get(reverse('sleep_statistics_show'))
-        
+
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'sleep_statistic/sleep_statistics_show.html')

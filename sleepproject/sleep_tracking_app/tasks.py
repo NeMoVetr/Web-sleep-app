@@ -163,7 +163,7 @@ def sleep_recommended(user_data_id: int, sleep_record_id: List[int], sleep_stati
 
     rec = get_sleep_recommendation(user_data, sleep_statistics_list, sleep_records_list)
     latest_stat = sleep_statistics_list[0]
-    latest_stat.recommended = sleep_records_list
+    latest_stat.recommended = rec
     latest_stat.save(update_fields=['recommended'])
     return rec
 

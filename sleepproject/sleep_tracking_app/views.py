@@ -119,33 +119,33 @@ def sleep_records_from_csv(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
-@cache_page(60 * 15)
 def sleep_statistics_show(request: HttpRequest) -> HttpResponse:
     user = request.user
     user_data = get_object_or_404(UserData, user=request.user)
 
     sleep_statistics = SleepStatistics.objects.only('id', 'user', 'recommended', 'sleep_calories_burned',
                                                     'sleep_efficiency', 'sleep_phases').filter(user=user).order_by(
-        '-date').first()
+        '-date')[:2]
 
     # Получаем записи сна за 7 дней с сортировкой по убыванию даты
     sleep_records = list(SleepRecord.get_last_sleep_records(user=user))
 
-    last_record = sleep_records[0] if sleep_records else None
+
+    last_record = sleep_records[:2] if sleep_records else None
 
     rec = None
     task_id = None
 
-    if sleep_statistics and not sleep_statistics.recommended and not request.GET.get("poll"):
+    if sleep_statistics and not sleep_statistics[0].recommended and not request.GET.get("poll"):
         # Создаём задачу Celery, если ещё нет рекомендации
         task = sleep_recommended.delay(
             user_data_id=user_data.id,
-            sleep_statistics_id=sleep_statistics.id,
-            sleep_record_id=last_record.id
+            sleep_statistics_id=[s.id for s in sleep_statistics],
+            sleep_record_id=[r.id for r in last_record]
         )
         task_id = task.id
     else:
-        rec = sleep_statistics.recommended if sleep_statistics else None
+        rec = sleep_statistics[0].recommended if sleep_statistics else None
 
     # Пагинация
     page_size = int(request.GET.get('page_size', 7))

@@ -161,6 +161,15 @@ services:
         loki-url: "http://loki:3100/loki/api/v1/push"
         loki-external-labels: "container_name={{.Name}},service=nginx"
 
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant_sleep
+    ports:
+      - "6333:6333"
+    volumes:
+      - ./qdrant_storage:/qdrant/storage
+    restart: unless-stopped
+
   ollama:
     image: ollama/ollama:0.9.6
     container_name: ollama

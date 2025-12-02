@@ -7,3 +7,6 @@
 ![Статистика сна 1](https://github.com/NeMoVetr/Web-sleep-app/blob/master/1.png)
 ![Статистика сна 2](https://github.com/NeMoVetr/Web-sleep-app/blob/master/2.png)
 ![Статистика сна 3](https://github.com/NeMoVetr/Web-sleep-app/blob/master/image.png)
+
+## Видео демонстрация проекта:
+https://youtu.be/k_ypDYnLaY4

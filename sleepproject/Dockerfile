@@ -24,12 +24,17 @@ RUN pip install --no-cache-dir poetry
 # Optional: clear Poetry cache
 RUN poetry cache clear pypi --all
 
+# Install Poetry + export plugin
+RUN pip install --no-cache-dir "poetry>=1.8.0" "poetry-plugin-export"
+
 # Copy only pyproject.toml and poetry.lock to leverage Docker cache
 COPY pyproject.toml poetry.lock* /app/
 
-# Install Python dependencies
+# Export dependencies to requirements.txt and install with pip
 RUN poetry config virtualenvs.create false \
-    && poetry install --no-interaction --no-ansi --no-root
+    && poetry export -f requirements.txt --output requirements.txt --without-hashes \
+    && pip install --no-cache-dir -r requirements.txt --retries 10 --timeout 100
+
 
 # Copy the rest of the project
 COPY . .

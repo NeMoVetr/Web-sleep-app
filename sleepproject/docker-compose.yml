@@ -252,10 +252,10 @@ services:
       - LANGFUSE_S3_MEDIA_UPLOAD_PREFIX=media/
 
       - REDIS_CONNECTION_STRING=redis://default:pass@redis:6379
-      - CLICKHOUSE_URL=clickhouse://default:pass@clickhouse:9000/default
+      - CLICKHOUSE_URL=http://clickhouse:8123
+      - CLICKHOUSE_MIGRATION_URL=clickhouse://clickhouse:9000
       - CLICKHOUSE_USER=default
       - CLICKHOUSE_PASSWORD=pass
-      - CLICKHOUSE_MIGRATION_URL=clickhouse://default:pass@clickhouse:9000/default
       - CLICKHOUSE_CLUSTER_ENABLED=false
       - DATABASE_PORT=5432
       - DATABASE_USERNAME=${BD_USER}           

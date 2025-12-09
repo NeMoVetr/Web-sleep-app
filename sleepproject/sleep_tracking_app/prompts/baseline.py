@@ -84,7 +84,7 @@ def get_sleep_recommendation(
         user_data: UserData,
         sleep_statistics: SleepStatistics,
         sleep_record: SleepRecord
-) -> str:
+) -> str|None:
     """
     Основная функция для получения рекомендаций по сну
     """
@@ -95,8 +95,8 @@ def get_sleep_recommendation(
     result = call_gemini(full_prompt)
 
     if not result:
-        error_msg = "Извините, я не смог обработать ваш запрос. Попробуйте позже."
-        return error_msg
+        print("Извините, я не смог обработать ваш запрос. Попробуйте позже.")
+        return None
 
     return result
 

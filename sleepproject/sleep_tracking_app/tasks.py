@@ -142,6 +142,7 @@ def sleep_recommended(user_data_id: int, sleep_record_id: int, sleep_statistics_
     sleep_statistics = SleepStatistics.objects.only('id','sleep_efficiency', 'sleep_fragmentation_index', 'latency_minutes', 'sleep_calories_burned', 'recommended').get(id=sleep_statistics_id)
 
     rec = get_sleep_recommendation(user_data, sleep_statistics, sleep_record)
+    print(rec)
     sleep_statistics.recommended = rec
     sleep_statistics.save(update_fields=['recommended'])
     return rec

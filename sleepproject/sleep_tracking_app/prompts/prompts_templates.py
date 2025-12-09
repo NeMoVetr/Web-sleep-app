@@ -1,49 +1,86 @@
+from typing import List
+
 from sleep_tracking_app.models import UserData, SleepStatistics, SleepRecord
 
 
-def create_sleep_analysis_prompt(user_data: UserData, sleep_statistics: SleepStatistics,
-                                 sleep_record: SleepRecord) -> str:
+def create_sleep_analysis_prompt(
+        user_data: UserData,
+        sleep_statistics_list: List[SleepStatistics],
+        sleep_records_list: List[SleepRecord]) -> str:
     """
     Создает промпт для анализа сна на основе данных пользователя
+    и нескольких последних ночей сна.
+
+    ВАЖНО:
+    - Первый элемент списков считается ПОСЛЕДНЕЙ ночью (самая свежая запись).
+    - Второй элемент — ПРЕДЫДУЩЕЙ ночью.
     """
 
     # Базовые параметры пользователя
     user_info = f"""Демографические данные:
-    - Возраст в месяцах: {user_data.get_age_months()}
-    - Пол: {user_data.get_gender()}
-    - Вес: {user_data.weight} кг
-    - Рост: {user_data.height} см"""
+        - Возраст в месяцах: {user_data.get_age_months()}
+        - Пол: {user_data.get_gender()}
+        - Вес: {user_data.weight} кг
+        - Рост: {user_data.height} см
+    """
 
-    # Данные сна
-    sleep_info = f"""Мои параметры сна за последний день:
-    - Продолжительность сна: {sleep_record.duration} минут
-    - Глубокий сон: {sleep_record.sleep_deep_duration} минут
-    - Легкий сон: {sleep_record.sleep_light_duration} минут
-    - Эффективность сна: {sleep_statistics.sleep_efficiency}%
-    - Индекс фрагментации сна: {sleep_statistics.sleep_fragmentation_index}
-    - Время засыпания: {sleep_statistics.latency_minutes} минут
-    - Калории сожжённые во сне: {sleep_statistics.sleep_calories_burned} ккал"""
+    nights_blocks = []
 
-    # Добавляем REM-сон если есть данные
-    if sleep_record.sleep_rem_duration and sleep_record.sleep_rem_duration > 0:
-        sleep_info += f"\n- REM-сон: {sleep_record.sleep_rem_duration} минут"
+    for idx, (sleep_statistics, sleep_record) in enumerate(
+            zip(sleep_statistics_list, sleep_records_list), start=1):
+        # Определяем заголовок для ночи
+        if idx == 1:
+            night_label = "Последняя ночь (самая свежая запись)"
+        elif idx == 2:
+            night_label = "Предыдущая ночь (за день до последней)"
+        else:
+            night_label = f"Более ранняя ночь номер {idx}"
 
-    # Добавляем пульс если есть данные
-    if sleep_record.avg_hr:
-        sleep_info += f"\n- Средний пульс: {sleep_record.avg_hr} уд/мин"
-    if sleep_record.min_hr:
-        sleep_info += f"\n- Минимальный пульс: {sleep_record.min_hr} уд/мин"
-    if sleep_record.max_hr:
-        sleep_info += f"\n- Максимальный пульс: {sleep_record.max_hr} уд/мин"
-    if sleep_record.awake_count:
-        sleep_info += f"\n- Количество пробуждений: {sleep_record.awake_count}"
+        # Попробуем взять дату, если она есть в модели SleepStatistics
+        date_str = ""
+        date_value = getattr(sleep_statistics, "date", None)
+        if date_value:
+            date_str = f"\n- Дата: {date_value}"
+
+        sleep_info = f"""{night_label}:{date_str}
+            - Продолжительность сна: {sleep_record.duration} минут
+            - Глубокий сон: {sleep_record.sleep_deep_duration} минут
+            - Легкий сон: {sleep_record.sleep_light_duration} минут
+            - Эффективность сна: {sleep_statistics.sleep_efficiency}%
+            - Индекс фрагментации сна: {sleep_statistics.sleep_fragmentation_index}
+            - Время засыпания: {sleep_statistics.latency_minutes} минут
+            - Калории, сожжённые во сне: {sleep_statistics.sleep_calories_burned} ккал
+        """
+
+        # Добавляем REM-сон если есть данные
+        if getattr(sleep_record, "sleep_rem_duration", None):
+            if sleep_record.sleep_rem_duration > 0:
+                sleep_info += f"\n- REM-сон: {sleep_record.sleep_rem_duration} минут"
+
+        # Добавляем пульс если есть данные
+        if getattr(sleep_record, "avg_hr", None):
+            sleep_info += f"\n- Средний пульс: {sleep_record.avg_hr} уд/мин"
+        if getattr(sleep_record, "min_hr", None):
+            sleep_info += f"\n- Минимальный пульс: {sleep_record.min_hr} уд/мин"
+        if getattr(sleep_record, "max_hr", None):
+            sleep_info += f"\n- Максимальный пульс: {sleep_record.max_hr} уд/мин"
+        if getattr(sleep_record, "awake_count", None):
+            sleep_info += f"\n- Количество пробуждений: {sleep_record.awake_count}"
+
+        nights_blocks.append(sleep_info)
+
+    nights_info = "\n\n".join(nights_blocks) if nights_blocks else "Нет данных по ночам сна."
 
     prompt = f"""
-    {user_info}
-
-    {sleep_info}
-
-    Внимательно проанализируй мою запись сна, учитывая все мои показатели. Дай конкретные советы, как улучшить мой сон.
+        {user_info}
+        
+        Мои параметры сна за последние ночи:
+        
+        {nights_info}
+        
+        Внимательно проанализируй мои записи сна. Чётко учитывай, что первая описанная ночь — это ПОСЛЕДНЯЯ ночь (самая свежая запись),
+        вторая — ПРЕДЫДУЩАЯ ночь. Сравни показатели между последней и предпредыдущей ночью, опиши тенденции и изменения.
+        Дай конкретные советы, как улучшить мой сон, с опорой в первую очередь на последнюю ночь, но с учётом динамики по сравнению с предыдущей.
     """
 
     return prompt

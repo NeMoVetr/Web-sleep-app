@@ -1,3 +1,5 @@
+from typing import List
+
 from celery import shared_task
 import pandas as pd
 import os
@@ -136,15 +138,33 @@ def import_sleep_records(self, user_id: int, csv_path: str):
     return {"status": "completed", "imported": processed}
 
 @shared_task
-def sleep_recommended(user_data_id: int, sleep_record_id: int, sleep_statistics_id:int):
+def sleep_recommended(user_data_id: int, sleep_record_id: List[int], sleep_statistics_id:List[int]):
     user_data = UserData.objects.get(id=user_data_id)
-    sleep_record = SleepRecord.objects.only('id','duration','sleep_rem_duration', 'sleep_deep_duration', 'sleep_rem_duration', 'sleep_light_duration').get(id=sleep_record_id)
-    sleep_statistics = SleepStatistics.objects.only('id','sleep_efficiency', 'sleep_fragmentation_index', 'latency_minutes', 'sleep_calories_burned', 'recommended').get(id=sleep_statistics_id)
+    # Забираем записи сна и статистику одним запросом
+    sleep_records_qs = SleepRecord.objects.only(
+        'id', 'duration', 'sleep_rem_duration',
+        'sleep_deep_duration', 'sleep_light_duration',
+    ).filter(id__in=sleep_record_id)
 
-    rec = get_sleep_recommendation(user_data, sleep_statistics, sleep_record)
-    print(rec)
-    sleep_statistics.recommended = rec
-    sleep_statistics.save(update_fields=['recommended'])
+    sleep_statistics_qs = SleepStatistics.objects.only(
+        'id', 'sleep_efficiency', 'sleep_fragmentation_index',
+        'latency_minutes', 'sleep_calories_burned', 'recommended',
+    ).filter(id__in=sleep_statistics_id)
+
+    sleep_records_map = {r.id: r for r in sleep_records_qs}
+    sleep_statistics_map = {s.id: s for s in sleep_statistics_qs}
+
+    # Сохраняем порядок такой же, как в списках id
+    sleep_records_list = [sleep_records_map[i] for i in sleep_record_id if i in sleep_records_map]
+    sleep_statistics_list = [sleep_statistics_map[i] for i in sleep_statistics_id if i in sleep_statistics_map]
+
+    if not sleep_records_list or not sleep_statistics_list:
+        return "Недостаточно данных для анализа сна."
+
+    rec = get_sleep_recommendation(user_data, sleep_statistics_list, sleep_records_list)
+    latest_stat = sleep_statistics_list[0]
+    latest_stat.recommended = rec
+    latest_stat.save(update_fields=['recommended'])
     return rec
 
 @app.task

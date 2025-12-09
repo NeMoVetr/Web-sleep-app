@@ -123,12 +123,15 @@ def sleep_statistics_show(request: HttpRequest) -> HttpResponse:
     user = request.user
     user_data = get_object_or_404(UserData, user=request.user)
 
-    sleep_statistics = SleepStatistics.objects.only('id', 'user', 'recommended', 'sleep_calories_burned',
+    sleep_statistics_list = SleepStatistics.objects.only('id', 'user', 'recommended', 'sleep_calories_burned',
                                                     'sleep_efficiency', 'sleep_phases').filter(user=user).order_by(
-        '-date').first()
+        '-date')
+
+    sleep_statistics = sleep_statistics_list.first() if sleep_statistics_list else None
 
     # Получаем записи сна за 7 дней с сортировкой по убыванию даты
     sleep_records = list(SleepRecord.get_last_sleep_records(user=user))
+
 
     last_record = sleep_records[0] if sleep_records else None
 
@@ -139,8 +142,8 @@ def sleep_statistics_show(request: HttpRequest) -> HttpResponse:
         # Создаём задачу Celery, если ещё нет рекомендации
         task = sleep_recommended.delay(
             user_data_id=user_data.id,
-            sleep_statistics_id=sleep_statistics.id,
-            sleep_record_id=last_record.id
+            sleep_statistics_id=[s.id for s in sleep_statistics_list],
+            sleep_record_id=[r.id for r in sleep_records]
         )
         task_id = task.id
     else:

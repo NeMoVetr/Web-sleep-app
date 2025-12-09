@@ -1,6 +1,6 @@
 import time
 import os
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from dotenv import load_dotenv
 # LLM client
 from google import genai
@@ -82,9 +82,9 @@ def call_gemini(prompt: str, test_case_id: str = "unknown") -> str:
 @observe(name="sleep_analysis_pipeline")
 def get_sleep_recommendation(
         user_data: UserData,
-        sleep_statistics: SleepStatistics,
-        sleep_record: SleepRecord
-) -> str|None:
+        sleep_statistics: List[SleepStatistics],
+        sleep_record: List[SleepRecord]
+) -> str:
     """
     Основная функция для получения рекомендаций по сну
     """

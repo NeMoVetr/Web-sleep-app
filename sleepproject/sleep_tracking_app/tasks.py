@@ -18,6 +18,11 @@ from .models import SleepRecord, SleepSegment, NightHeartRateEntry, SleepStatist
 from .sleep_statistic import calculate_sleep_statistics_metrics
 from .prompts import get_sleep_recommendation
 
+from sleep_tracking_app.rag.rag_service import RagService
+from sleep_tracking_app.prompts.baseline import call_gemini
+from sleep_tracking_app.prompts.prompts_templates import create_sleep_analysis_prompt, get_system_prompt
+from sleep_tracking_app.models import UserData, SleepRecord, SleepStatistics
+
 @shared_task(bind=True, name='import_sleep_records_task')
 def import_sleep_records(self, user_id: int, csv_path: str):
     progress_recorder = ProgressRecorder(self)
@@ -161,11 +166,42 @@ def sleep_recommended(user_data_id: int, sleep_record_id: List[int], sleep_stati
     if not sleep_records_list or not sleep_statistics_list:
         return "Недостаточно данных для анализа сна."
 
-    rec = get_sleep_recommendation(user_data, sleep_statistics_list, sleep_records_list)
+     # Этап 1: Gemini (используем точно такой же промпт как раньше)
+    system_prompt = get_system_prompt()
+    user_prompt = create_sleep_analysis_prompt(user_data, sleep_statistics_list, sleep_records_list)
+    full_prompt = f"{system_prompt}\n\n{user_prompt}"
+    
+    gemini_response = call_gemini(full_prompt)
+    if not gemini_response:
+        return "Ошибка генерации рекомендаций."
+    
+    # Этап 2: RAG улучшение (Gemini → поиск статей → Mistral)
+    rag_service = RagService()
+    user_data_dict = {
+        "age_months": user_data.get_age_months(),
+        "gender": user_data.get_gender(),
+        "weight": user_data.weight,
+        "height": user_data.height
+    }
+    
+    rag_result = rag_service.enhance(gemini_response, user_data_dict)
+    final_recommendation = rag_result.get("enhanced", gemini_response)
+    
+    # Этап 3: Сохранение 
     latest_stat = sleep_statistics_list[0]
-    latest_stat.recommended = rec
-    latest_stat.save(update_fields=['recommended'])
-    return rec
+    latest_stat.recommended = final_recommendation
+    
+    """# сохраняем метаданные RAG для отладки
+    rag_metadata = {
+        "gemini_preview": gemini_response[:200],
+        "rag_search_query": rag_result.get("search_query", ""),
+        "rag_sources_count": len(rag_result.get("sources", [])),
+        "mistral_used": bool(rag_result.get("enhanced"))
+    }
+    latest_stat.health_impact = json.dumps(rag_metadata)
+    """
+    latest_stat.save(update_fields=['recommended', 'health_impact'])    
+    return latest_stat.recommended
 
 @app.task
 def send_reminder_email():

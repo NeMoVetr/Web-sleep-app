@@ -1,3 +1,5 @@
+from datetime import date
+
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 from unittest.mock import patch
@@ -18,7 +20,7 @@ class TasksTests(TestCase):
         )
         self.user_data = UserData.objects.create(
             user=self.user,
-            date_of_birth='1990-01-01',
+            date_of_birth=date(1990, 1, 1),
             weight=70,
             gender=1,
             height=175
@@ -45,28 +47,47 @@ class TasksTests(TestCase):
             sleep_calories_burned=200
         )
 
-    @patch('sleep_tracking_app.tasks.get_sleep_recommendation')
-    def test_sleep_recommended_updates_sleepstatistics(self, mock_get):
-        mock_get.return_value = 'Keep regular schedule and avoid caffeine.'
+    @patch('sleep_tracking_app.tasks.RagService')
+    @patch('sleep_tracking_app.tasks.call_gemini')
+    @patch('sleep_tracking_app.tasks.create_sleep_analysis_prompt')
+    @patch('sleep_tracking_app.tasks.get_system_prompt')
+    def test_sleep_recommended_updates_sleepstatistics(
+            self,
+            mock_get_system_prompt,
+            mock_create_prompt,
+            mock_call_gemini,
+            mock_rag_service_cls,
+    ):
+        # Делаем промпты детерминированными
+        mock_get_system_prompt.return_value = "SYS"
+        mock_create_prompt.return_value = "USER"
 
-        # вызываем таску НАПРЯМУЮ, но теперь с массивами id
+        # Gemini вернул черновик
+        mock_call_gemini.return_value = "Gemini draft"
+
+        # RAG улучшил ответ
+        rag_instance = mock_rag_service_cls.return_value
+        rag_instance.enhance.return_value = {"enhanced": "Final recommendation"}
+
         rec = sleep_recommended(
             self.user_data.id,
-            [self.record.id],      # список id записей сна
-            [self.stat.id],        # список id статистик
+            [self.record.id],
+            [self.stat.id],
         )
 
-        # ensure returned recommendation equals mocked
-        self.assertEqual(rec, mock_get.return_value)
+        self.assertEqual(rec, "Final recommendation")
 
-        # обновляем объект из базы
         self.stat.refresh_from_db()
-        self.assertEqual(self.stat.recommended, mock_get.return_value)
+        self.assertEqual(self.stat.recommended, "Final recommendation")
 
-        # опционально можно проверить, что get_sleep_recommendation был вызван с массивами:
-        mock_get.assert_called_once()
-        args, kwargs = mock_get.call_args
-        # user_data, stats_list, records_list
-        self.assertEqual(args[0].id, self.user_data.id)
-        self.assertEqual([s.id for s in args[1]], [self.stat.id])
-        self.assertEqual([r.id for r in args[2]], [self.record.id])
+        # Проверяем, что Gemini вызван с ожидаемым full_prompt
+        mock_call_gemini.assert_called_once_with("SYS\n\nUSER")
+
+        # Проверяем, что enhance вызван с gemini_response и корректным user_data_dict
+        expected_user_data_dict = {
+            "age_months": self.user_data.get_age_months(),
+            "gender": self.user_data.get_gender(),
+            "weight": self.user_data.weight,
+            "height": self.user_data.height,
+        }
+        rag_instance.enhance.assert_called_once_with("Gemini draft", expected_user_data_dict)

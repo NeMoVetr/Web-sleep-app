@@ -49,3 +49,24 @@ jobs:
             PYTHONWARNINGS: ignore
           run: poetry run python manage.py test sleep_tracking_app --verbosity=2
 
+    build:
+      needs: [test]
+      runs-on: ubuntu-latest
+      steps:
+        - name: Build
+          run: |
+            echo "Building Docker images (stub)..."
+            echo "Tag: sha-${GITHUB_SHA}"
+            echo "Pushing to registry (stub)..."
+            sleep 46.423
+
+    deploy:
+      needs: [build]
+      runs-on: ubuntu-latest
+      steps:
+        - name: Deploy to dev (stub)
+          run: |
+            echo "Deploying to DEV (stub)..."
+            echo "kubectl apply -f k8s/ (stub)"
+            echo "kubectl rollout status ... (stub)"
+            sleep 116.789

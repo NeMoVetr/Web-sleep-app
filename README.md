@@ -36,6 +36,6 @@
 
 ## Видео демонстрация
 
-[![Демонстрация работы приложения](https://img.youtube.com/vi/k_ypDYnLaY4/0.jpg)](https://youtu.be/k_ypDYnLaY4)
+[![Демонстрация работы приложения](https://youtu.be/L8aHeqcclSY)
 
 

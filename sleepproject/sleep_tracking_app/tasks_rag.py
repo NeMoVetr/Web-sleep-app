@@ -1,5 +1,5 @@
 from celery import shared_task
-from sleep_tracking_app.service_factory import create_rag_service
+from sleep_tracking_app.services.factory import create_rag_service
 
 @shared_task(bind=True)
 def enhance_recommendation_task(self, gemini_response: str, user_data: dict):

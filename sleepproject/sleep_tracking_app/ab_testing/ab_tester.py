@@ -5,8 +5,8 @@ from dataclasses import dataclass
 from typing import List, Dict, Any, Optional
 from sleep_tracking_app.models import UserData, SleepStatistics, SleepRecord
 from sleep_tracking_app.prompts.prompts_templates import get_system_prompt as get_baseline_system_prompt
-from sleep_tracking_app.recommendations import RecommendationEngine
-from sleep_tracking_app.service_factory import create_recommendation_engine
+from sleep_tracking_app.services.recommendations import RecommendationEngine
+from sleep_tracking_app.services.factory import create_recommendation_engine
 from sleep_tracking_app.ab_testing.judge import SleepLLMJudge
 from sleep_tracking_app.ab_testing.scenarios import get_test_scenarios_from_db
 

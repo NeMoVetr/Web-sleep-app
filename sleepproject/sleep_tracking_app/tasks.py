@@ -10,12 +10,12 @@ from sleepproject.celery import app  # Фоновая задача
 
 from django.core.mail import send_mass_mail
 
-from .import_service import SleepImportService
-from .sleep_import import CurrentCsvSleepParser
+from .data_import.service import SleepImportService
+from .data_import.parsers import CurrentCsvSleepParser
 from .models import SleepRecord, SleepStatistics, UserData
 
 
-from .service_factory import create_recommendation_engine
+from .services.factory import create_recommendation_engine
 
 @shared_task(bind=True, name='import_sleep_records_task')
 def import_sleep_records(self, user_id: int, csv_path: str):

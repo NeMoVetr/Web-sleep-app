@@ -12,7 +12,7 @@ class GeminiClient(TextGenerationClient):
         self._generate_text = generate_text
 
     def generate(self, prompt: str, *, system_prompt: str | None = None) -> GenerationResult:
-        from .prompts.baseline import MODEL_NAME, call_gemini
+        from ..prompts.baseline import MODEL_NAME, call_gemini
 
         start = perf_counter()
         full_prompt = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
@@ -26,7 +26,7 @@ class GeminiClient(TextGenerationClient):
 
 class GigaChatClient(TextGenerationClient):
     def generate(self, prompt: str, *, system_prompt: str | None = None) -> GenerationResult:
-        from .sleep_statistic.gigachat import get_answer
+        from ..sleep_statistic.gigachat import get_answer
 
         start = perf_counter()
         try:

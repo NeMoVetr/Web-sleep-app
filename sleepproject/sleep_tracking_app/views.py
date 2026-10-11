@@ -23,7 +23,7 @@ from sleepproject.settings import MEDIA_ROOT
 from .forms import UserRegistrationForm, UserDataForm, UserInfoUpdateForm, \
     CSVImportForm
 from .models import SleepRecord, SleepStatistics, UserData
-from .pagination import CursorPage, CursorPaginatedView
+from .web.pagination import CursorPage, CursorPaginatedView
 
 # Create your views here.
 # python-benedict

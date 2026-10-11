@@ -47,7 +47,7 @@ class TasksTests(TestCase):
             sleep_calories_burned=200
         )
 
-    @patch('sleep_tracking_app.service_factory.create_rag_service')
+    @patch('sleep_tracking_app.services.factory.create_rag_service')
     @patch('sleep_tracking_app.prompts.baseline.call_gemini')
     @patch('sleep_tracking_app.prompts.prompts_templates.create_sleep_analysis_prompt')
     @patch('sleep_tracking_app.prompts.prompts_templates.get_system_prompt')

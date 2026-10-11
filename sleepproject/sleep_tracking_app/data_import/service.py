@@ -3,9 +3,9 @@
 from django.contrib.auth.models import User
 from django.db import transaction
 
-from .models import SleepRecord, SleepSegment, NightHeartRateEntry, SleepStatistics, UserData
-from .sleep_import import SleepDataParser, ProgressCallback, ignore_progress
-from .sleep_statistic import calculate_sleep_statistics_metrics
+from ..models import SleepRecord, SleepSegment, NightHeartRateEntry, SleepStatistics, UserData
+from .contracts import SleepDataParser, ProgressCallback, ignore_progress
+from ..sleep_statistic import calculate_sleep_statistics_metrics
 
 
 class SleepImportService:

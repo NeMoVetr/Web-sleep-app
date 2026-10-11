@@ -3,7 +3,7 @@ import json
 from typing import Any, Dict, List
 from langfuse import observe  # type: ignore
 
-from ..contracts import RecommendationEnhancer, ResearchHit, ResearchRetriever, TextGenerationClient
+from ..ai.contracts import RecommendationEnhancer, ResearchHit, ResearchRetriever, TextGenerationClient
 
 DEFAULT_SYSTEM_PROMPT = (
     "Ты — AI-эксперт по сну. Используй научные исследования чтобы улучшить рекомендации. "

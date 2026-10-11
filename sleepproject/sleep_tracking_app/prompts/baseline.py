@@ -87,8 +87,8 @@ def get_sleep_recommendation(
     """
     Основная функция для получения рекомендаций по сну
     """
-    from ..ai_clients import GeminiClient
-    from ..recommendations import DirectRecommendationEngine
+    from ..ai.clients import GeminiClient
+    from ..services.recommendations import DirectRecommendationEngine
 
     result = DirectRecommendationEngine(GeminiClient()).recommend(
         user_data, sleep_statistics, sleep_record,

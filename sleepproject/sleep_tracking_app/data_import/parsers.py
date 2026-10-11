@@ -1,39 +1,16 @@
-"""Format-independent sleep import contracts."""
+"""Parsers for supported sleep data formats."""
 
-from abc import ABC, abstractmethod
-from dataclasses import dataclass
 from os import PathLike
-from typing import Callable
 
 import pandas as pd
 
-
-ProgressCallback = Callable[[int, int, str], None]
-
-
-def ignore_progress(current: int, total: int, description: str = "") -> None:
-    """Default progress callback for imports outside Celery."""
-
-
-@dataclass(frozen=True)
-class ParsedSleepData:
-    records: pd.DataFrame
-    segments: pd.DataFrame
-    heart_rates: pd.DataFrame
-
-
-class SleepDataParser(ABC):
-    @abstractmethod
-    def parse(self, source: str | PathLike | pd.DataFrame,
-              *, progress: ProgressCallback = ignore_progress) -> ParsedSleepData | None:
-        """Return normalized data, or None for an unsupported file."""
-        raise NotImplementedError
+from .contracts import ParsedSleepData, ProgressCallback, SleepDataParser, ignore_progress
 
 
 class CurrentCsvSleepParser(SleepDataParser):
     def parse(self, source: str | PathLike | pd.DataFrame,
               *, progress: ProgressCallback = ignore_progress) -> ParsedSleepData | None:
-        from .csv_data_extraction import _extract_sleep_data
+        from .csv import _extract_sleep_data
 
         frame = source if isinstance(source, pd.DataFrame) else pd.read_csv(source, encoding="utf-8")
         result = _extract_sleep_data(frame, progress)

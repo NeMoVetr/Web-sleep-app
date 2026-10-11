@@ -2,8 +2,8 @@ import json
 import re
 from typing import Any
 
-from sleep_tracking_app.ai_clients import GeminiClient
-from sleep_tracking_app.contracts import TextGenerationClient
+from sleep_tracking_app.ai.clients import GeminiClient
+from sleep_tracking_app.ai.contracts import TextGenerationClient
 from sleep_tracking_app.prompts.prompts_templates import make_judge_prompt
 
 

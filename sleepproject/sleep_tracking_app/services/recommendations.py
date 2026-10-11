@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from time import perf_counter
 from typing import Any
 
-from .contracts import GenerationResult, RecommendationEnhancer, TextGenerationClient
+from ..ai.contracts import GenerationResult, RecommendationEnhancer, TextGenerationClient
 
 
 @dataclass(frozen=True)
@@ -30,7 +30,7 @@ class DirectRecommendationEngine(RecommendationEngine):
 
     def recommend(self, user_data, sleep_statistics, sleep_records,
                   *, system_prompt: str | None = None) -> RecommendationResult:
-        from .prompts.prompts_templates import create_sleep_analysis_prompt, get_system_prompt
+        from ..prompts.prompts_templates import create_sleep_analysis_prompt, get_system_prompt
 
         builder = self.prompt_builder or create_sleep_analysis_prompt
         prompt = builder(user_data, sleep_statistics, sleep_records)

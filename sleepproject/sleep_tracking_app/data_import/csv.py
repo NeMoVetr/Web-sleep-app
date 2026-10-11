@@ -1,6 +1,6 @@
 import json
 import pandas as pd
-from .sleep_import import CurrentCsvSleepParser, ProgressCallback, ignore_progress
+from .contracts import ProgressCallback, ignore_progress
 
 def convert_to_readable_time(list_of_unix_timestamps: list, df_column: pd.DataFrame) -> None:
     """Преобразует UNIX-метку времени в читаемый формат."""
@@ -131,6 +131,8 @@ def _extract_sleep_data(sleep_data: pd.DataFrame, progress: ProgressCallback = i
 
 def sleep_record_from_csv(sleep_data: pd.DataFrame, progress_recorder=None):
     """Compatibility wrapper returning the historical tuple of data frames."""
+    from .parsers import CurrentCsvSleepParser
+
     progress = progress_recorder.set_progress if progress_recorder is not None else ignore_progress
     result = CurrentCsvSleepParser().parse(sleep_data, progress=progress)
     if result is None:

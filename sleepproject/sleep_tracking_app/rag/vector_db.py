@@ -5,7 +5,7 @@ from typing import List, Dict, Any
 
 from qdrant_client import QdrantClient
 from qdrant_client.models import PointStruct, VectorParams, Distance
-from ..contracts import ResearchHit, ResearchRetriever
+from ..ai.contracts import ResearchHit, ResearchRetriever
 
 QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")
 QDRANT_PORT = int(os.getenv("QDRANT_PORT", 6333))

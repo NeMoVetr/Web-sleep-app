@@ -4,7 +4,7 @@ import time
 from typing import Any, Dict, Optional
 import requests
 from langfuse import observe  # type: ignore
-from ..contracts import GenerationResult, TextGenerationClient
+from ..ai.contracts import GenerationResult, TextGenerationClient
 
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://ollama:11434/api/generate")
 MISTRAL_MODEL = os.getenv("MISTRAL_MODEL", "mistral:7b-instruct-q4_K_M")

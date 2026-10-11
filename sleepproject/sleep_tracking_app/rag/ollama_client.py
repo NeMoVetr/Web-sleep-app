@@ -4,6 +4,7 @@ import time
 from typing import Any, Dict, Optional
 import requests
 from langfuse import observe  # type: ignore
+from ..contracts import GenerationResult, TextGenerationClient
 
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://ollama:11434/api/generate")
 MISTRAL_MODEL = os.getenv("MISTRAL_MODEL", "mistral:7b-instruct-q4_K_M")
@@ -63,7 +64,7 @@ def _generate_call(payload: Dict[str, Any], base_url: str, timeout: int = 60) ->
         }
 
 
-class OllamaClient:
+class OllamaClient(TextGenerationClient):
     def __init__(self, base_url: Optional[str] = None, model: Optional[str] = None):
         self.base_url = base_url or OLLAMA_URL
         self.model = model or MISTRAL_MODEL
@@ -79,15 +80,13 @@ class OllamaClient:
     def generate(
         self,
         prompt: str,
-        system: Optional[str] = None,
+        *,
+        system_prompt: Optional[str] = None,
         temperature: float = 0.3,
         num_predict: int = 512,
         timeout: int = 60
-    ) -> Dict[str, Any]:
-        """
-        High-level generate. Returns dict (see _generate_call).
-        Caller must inspect dict['error'] or dict['response'].
-        """
+    ) -> GenerationResult:
+        """Normalize the Ollama response to the shared generation contract."""
         payload: Dict[str, Any] = {
             "model": self.model,
             "prompt": prompt,
@@ -98,7 +97,14 @@ class OllamaClient:
                 "num_predict": num_predict
             }
         }
-        if system:
-            payload["system"] = system
+        if system_prompt:
+            payload["system"] = system_prompt
 
-        return _generate_call(payload=payload, base_url=self.base_url, timeout=timeout)
+        result = _generate_call(payload=payload, base_url=self.base_url, timeout=timeout)
+        text = result.get("response") or ""
+        return GenerationResult(
+            text=text,
+            model=self.model,
+            latency_seconds=result["latency"],
+            error=result.get("error") or (None if text.strip() else "Ollama returned no text"),
+        )

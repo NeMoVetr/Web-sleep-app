@@ -47,10 +47,10 @@ class TasksTests(TestCase):
             sleep_calories_burned=200
         )
 
-    @patch('sleep_tracking_app.tasks.RagService')
-    @patch('sleep_tracking_app.tasks.call_gemini')
-    @patch('sleep_tracking_app.tasks.create_sleep_analysis_prompt')
-    @patch('sleep_tracking_app.tasks.get_system_prompt')
+    @patch('sleep_tracking_app.service_factory.create_rag_service')
+    @patch('sleep_tracking_app.prompts.baseline.call_gemini')
+    @patch('sleep_tracking_app.prompts.prompts_templates.create_sleep_analysis_prompt')
+    @patch('sleep_tracking_app.prompts.prompts_templates.get_system_prompt')
     def test_sleep_recommended_updates_sleepstatistics(
             self,
             mock_get_system_prompt,

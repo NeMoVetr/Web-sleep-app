@@ -28,7 +28,7 @@ def get_access_token() -> str:
     return response.json()["access_token"]
 
 
-def get_answer(prompt: [str]):
+def get_answer(prompt: str, *, system_prompt: str | None = None):
     url = "https://gigachat.devices.sberbank.ru/api/v1/chat/completions"
 
     access_token = get_access_token()
@@ -42,7 +42,7 @@ def get_answer(prompt: [str]):
         "model": "GigaChat",
         "messages": [
             {"role": "system",
-             "content": """Ты — эксперт по сну (сомнолог), 
+             "content": system_prompt if system_prompt is not None else """Ты — эксперт по сну (сомнолог),
              твоя задача дать краткую рекомендацию пользователю на основе показателей, которые он прислал. 
              Твой ответ должен в развёрнутых предложениях, чтобы пользователь понял, что ты эксперт который может донести свою мысль простыми словами.
              Примечание: запрещено использовать язык разметки Markdown.

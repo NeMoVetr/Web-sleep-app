@@ -1,10 +1,9 @@
 # sleep_tracking_app/rag/rag_service.py
 import json
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 from langfuse import observe  # type: ignore
 
-from .vector_db import SleepVectorDB
-from .ollama_client import OllamaClient
+from ..contracts import RecommendationEnhancer, ResearchHit, ResearchRetriever, TextGenerationClient
 
 DEFAULT_SYSTEM_PROMPT = (
     "Ты — AI-эксперт по сну. Используй научные исследования чтобы улучшить рекомендации. "
@@ -13,11 +12,10 @@ DEFAULT_SYSTEM_PROMPT = (
 )
 
 
-class RagService:
-    def __init__(self, vector_db: Optional[SleepVectorDB] = None, ollama_client: Optional[OllamaClient] = None):
-        # Optional в аннотации и конкретная инициализация внутри
-        self.vector_db = vector_db if vector_db is not None else SleepVectorDB()
-        self.ollama = ollama_client if ollama_client is not None else OllamaClient()
+class RagService(RecommendationEnhancer):
+    def __init__(self, vector_db: ResearchRetriever, ollama_client: TextGenerationClient):
+        self.vector_db = vector_db
+        self.ollama = ollama_client
 
     def _create_search_query(self, gemini_response: str, user_data: Dict[str, Any]) -> str:
         problem_indicators = [
@@ -49,25 +47,25 @@ class RagService:
             return " ".join(uniq)
         return "качество сна улучшение исследование"
 
-    def _build_research_context(self, results: List[Dict[str, Any]]) -> str:
+    def _build_research_context(self, results: List[ResearchHit]) -> str:
         if not results:
             return "Научные исследования не найдены."
         parts = []
         for i, r in enumerate(results, 1):
-            txt = r.get("text", "")
+            txt = r.text
             excerpt = (txt[:500] + "...") if isinstance(txt, str) and len(txt) > 500 else txt
             parts.append(
                 f"--- ИССЛЕДОВАНИЕ {i} ---\n"
-                f"Источник: {r.get('source','unknown')}\n"
-                f"Релевантность: {r.get('score', 0):.3f}\n"
+                f"Источник: {r.source}\n"
+                f"Релевантность: {r.score:.3f}\n"
                 f"{excerpt}\n"
             )
         return "\n".join(parts)
 
     @observe(name="rag_enhance")
-    def enhance(self, gemini_response: str, user_data: Dict[str, Any]) -> Dict[str, Any]:
+    def enhance(self, original: str, user_data: Dict[str, Any]) -> Dict[str, Any]:
         # 1) query
-        search_query = self._create_search_query(gemini_response, user_data)
+        search_query = self._create_search_query(original, user_data)
 
         # 2) search
         try:
@@ -76,7 +74,7 @@ class RagService:
             search_hits = []
 
         sources = [
-            {"source": h.get("source"), "score": h.get("score"), "chunk_id": h.get("chunk_id")}
+            {"source": h.source, "score": h.score, "chunk_id": h.chunk_id}
             for h in search_hits
         ]
 
@@ -88,25 +86,18 @@ class RagService:
         full_prompt = (
             f"{system_prompt}\n\n"
             f"НАУЧНЫЕ ИССЛЕДОВАНИЯ:\n{research_context}\n\n"
-            f"ИСХОДНЫЕ РЕКОМЕНДАЦИИ (Gemini):\n{gemini_response}\n\n"
+            f"ИСХОДНЫЕ РЕКОМЕНДАЦИИ:\n{original}\n\n"
             f"ДАННЫЕ ПОЛЬЗОВАТЕЛЯ:\n{json.dumps(user_data, ensure_ascii=False, indent=2)}\n\n"
             "Улучшить рекомендации, опираясь на исследования."
         )
 
         # 5) call Ollama
-        mistral_result = self.ollama.generate(full_prompt, system=system_prompt)
-
-        enhanced_text = ""
-        error_text: Optional[str] = None
-
-        if isinstance(mistral_result, dict):
-            error_text = mistral_result.get("error")
-            enhanced_text = mistral_result.get("response") or mistral_result.get("response_preview") or ""
-        else:
-            enhanced_text = str(mistral_result)
+        mistral_result = self.ollama.generate(full_prompt, system_prompt=system_prompt)
+        enhanced_text = mistral_result.text if mistral_result.error is None else ""
+        error_text = mistral_result.error
 
         result: Dict[str, Any] = {
-            "original": gemini_response,
+            "original": original,
             "search_query": search_query,
             "sources": sources,
             "prompt_preview": full_prompt[:1500],

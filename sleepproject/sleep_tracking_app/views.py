@@ -1,9 +1,7 @@
 import json
 import os
-from typing import Optional
 import uuid
 
-from cursor_pagination import CursorPaginator
 
 from django.views.decorators.cache import cache_page
 from django.contrib.auth import logout
@@ -25,6 +23,7 @@ from sleepproject.settings import MEDIA_ROOT
 from .forms import UserRegistrationForm, UserDataForm, UserInfoUpdateForm, \
     CSVImportForm
 from .models import SleepRecord, SleepStatistics, UserData
+from .pagination import CursorPage, CursorPaginatedView
 
 # Create your views here.
 # python-benedict
@@ -118,168 +117,156 @@ def sleep_records_from_csv(request: HttpRequest) -> HttpResponse:
     return render(request, 'sleep_records_from_csv.html', {'form': CSVImportForm()})
 
 
-@login_required
-def sleep_statistics_show(request: HttpRequest) -> HttpResponse:
-    user = request.user
-    user_data = get_object_or_404(UserData, user=request.user)
+class SleepStatisticsView(CursorPaginatedView):
+    ordering = ('-sleep_date_time', '-id')
 
-    sleep_statistics_list = SleepStatistics.objects.only('id', 'user', 'recommended', 'sleep_calories_burned',
-                                                    'sleep_efficiency', 'sleep_phases').filter(user=user).order_by(
-        '-date')
+    def get_queryset(self, request):
+        return SleepRecord.get_delta_days_sleep_records(request.user)
 
-    sleep_statistics = sleep_statistics_list.first() if sleep_statistics_list else None
+    def render_page(self, request, pagination: CursorPage):
+        user = request.user
+        user_data = get_object_or_404(UserData, user=request.user)
 
-    # Получаем записи сна за 7 дней с сортировкой по убыванию даты
-    sleep_records = list(SleepRecord.get_last_sleep_records(user=user))
+        sleep_statistics_list = SleepStatistics.objects.only('id', 'user', 'recommended', 'sleep_calories_burned',
+                                                        'sleep_efficiency', 'sleep_phases').filter(user=user).order_by(
+            '-date')
+
+        sleep_statistics = sleep_statistics_list.first() if sleep_statistics_list else None
+
+        # Получаем записи сна за 7 дней с сортировкой по убыванию даты
+        sleep_records = list(SleepRecord.get_last_sleep_records(user=user))
 
 
-    last_record = sleep_records[0] if sleep_records else None
+        last_record = sleep_records[0] if sleep_records else None
 
-    rec = None
-    task_id = None
+        rec = None
+        task_id = None
 
-    if sleep_statistics and not sleep_statistics.recommended and not request.GET.get("poll"):
-        # Создаём задачу Celery, если ещё нет рекомендации
-        task = sleep_recommended.delay(
-            user_data_id=user_data.id,
-            sleep_statistics_id=[s.id for s in sleep_statistics_list],
-            sleep_record_id=[r.id for r in sleep_records]
-        )
-        task_id = task.id
-    else:
-        rec = sleep_statistics.recommended if sleep_statistics else None
+        if sleep_statistics and not sleep_statistics.recommended and not request.GET.get("poll"):
+            # Создаём задачу Celery, если ещё нет рекомендации
+            task = sleep_recommended.delay(
+                user_data_id=user_data.id,
+                sleep_statistics_id=[s.id for s in sleep_statistics_list],
+                sleep_record_id=[r.id for r in sleep_records]
+            )
+            task_id = task.id
+        else:
+            rec = sleep_statistics.recommended if sleep_statistics else None
 
-    # Пагинация
-    page_size = int(request.GET.get('page_size', 7))
-    qs = SleepRecord.get_delta_days_sleep_records(user)
+        page = pagination.items
+        page_size = pagination.page_size
+        next_cursor = pagination.next_cursor
+        prev_cursor = pagination.prev_cursor
 
-    paginator = CursorPaginator(qs, ordering=('-sleep_date_time', '-id'))
+        # Подготовка данных для графика
+        graph_data = get_sleep_duration_trend(page)
 
-    after = request.GET.get('after')
-    before = request.GET.get('before')
+        # Метрики
+        metric = {
+            'chronotype': chronotype_assessment(sleep_records=sleep_records) if sleep_records else {},
+            'sleep_regularity': sleep_regularity(sleep_records=sleep_records) if sleep_records else {},
+            'avg_sleep_duration': avg_sleep_duration(page) if page else 0,
+            'calories_burned': getattr(sleep_statistics, 'sleep_calories_burned', 0),
+            'sleep_efficiency': round(getattr(sleep_statistics, 'sleep_efficiency', 0), 2),
+        }
 
-    if before:
-        page = paginator.page(last=page_size, before=before)
-    else:
-        page = paginator.page(first=page_size, after=after)
+        # Подготовка plot_data
+        first_date = graph_data['dates'][0] if graph_data.get('dates') else 0
+        last_date = graph_data['dates'][-1] if graph_data.get('dates') else 0
 
-    # Курсоры для ответа
-    next_cursor: Optional[str] = paginator.cursor(page[-1]) if page and page.has_next else None
-    prev_cursor: Optional[str] = paginator.cursor(page[0]) if page and page.has_previous else None
+        phases = get_sleep_phases_pie_data(sleep_statistics)
+        heart_rate = get_heart_rate_bell_curve_data(last_record)
 
-    # Подготовка данных для графика
-    graph_data = get_sleep_duration_trend(page)
+        plot_data = {
+            'phases': phases,
+            'graph_data': graph_data,
+            'heart_rate': heart_rate,
+            'first_date': first_date,
+            'last_date': last_date,
+        }
 
-    # Метрики
-    metric = {
-        'chronotype': chronotype_assessment(sleep_records=sleep_records) if sleep_records else {},
-        'sleep_regularity': sleep_regularity(sleep_records=sleep_records) if sleep_records else {},
-        'avg_sleep_duration': avg_sleep_duration(page) if page else 0,
-        'calories_burned': getattr(sleep_statistics, 'sleep_calories_burned', 0),
-        'sleep_efficiency': round(getattr(sleep_statistics, 'sleep_efficiency', 0), 2),
-    }
+        # AJAX-ответ
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            rec = sleep_statistics.recommended if sleep_statistics else None
+            return JsonResponse({
+                'has_next': page.has_next,
+                'has_previous': page.has_previous,
+                'next_cursor': next_cursor,
+                'prev_cursor': prev_cursor,
+                'graph_data': graph_data,
+                'first_date': first_date,
+                'last_date': last_date,
+                'metric': metric,
+                'rec': rec,
+                'task_id': task_id
 
-    # Подготовка plot_data
-    first_date = graph_data['dates'][0] if graph_data.get('dates') else 0
-    last_date = graph_data['dates'][-1] if graph_data.get('dates') else 0
+            })
 
-    phases = get_sleep_phases_pie_data(sleep_statistics)
-    heart_rate = get_heart_rate_bell_curve_data(last_record)
+        # Передаём контекст
+        context = {
+            'page': page,
+            'graph_data': graph_data,
+            'metric': metric,
+            'plot_data': plot_data,
+            'page_size': page_size,
+            'rec': rec,
+            'task_id': task_id,
+            'next_cursor': next_cursor,
+            'prev_cursor': prev_cursor,
 
-    plot_data = {
-        'phases': phases,
-        'graph_data': graph_data,
-        'heart_rate': heart_rate,
-        'first_date': first_date,
-        'last_date': last_date,
-    }
+        }
 
-    # AJAX-ответ
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        rec = sleep_statistics.recommended if sleep_statistics else None
-        return JsonResponse({
+        return render(request, 'sleep_statistic/sleep_statistics_show.html', context)
+
+
+class SleepHistoryView(CursorPaginatedView):
+    ordering = ('-date', '-id')
+
+    def get_queryset(self, request):
+        return SleepStatistics.get_delta_days_sleep_statistics(request.user)
+
+    def render_page(self, request, pagination: CursorPage):
+        page = pagination.items
+        page_size = pagination.page_size
+        next_cursor = pagination.next_cursor
+        prev_cursor = pagination.prev_cursor
+
+        # Преобразуем в JSON для графика
+        graph_data_json = get_sleep_efficiency_trend(page)
+
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            # Если запрос AJAX, возвращаем только HTML таблицы и курсоры
+            return JsonResponse({
+
+                'has_next': page.has_next,
+                'has_previous': page.has_previous,
+                'next_cursor': next_cursor,
+                'prev_cursor': prev_cursor,
+                'graph_data_json': graph_data_json,
+            })
+
+        context = {
+
             'has_next': page.has_next,
             'has_previous': page.has_previous,
             'next_cursor': next_cursor,
             'prev_cursor': prev_cursor,
-            'graph_data': graph_data,
-            'first_date': first_date,
-            'last_date': last_date,
-            'metric': metric,
-            'rec': rec,
-            'task_id': task_id
+            'graph_data_json': json.dumps(graph_data_json),
+            'page_size': page_size,
 
-        })
+        }
 
-    # Передаём контекст
-    context = {
-        'page': page,
-        'graph_data': graph_data,
-        'metric': metric,
-        'plot_data': plot_data,
-        'page_size': page_size,
-        'rec': rec,
-        'task_id': task_id,
-        'next_cursor': next_cursor,
-        'prev_cursor': prev_cursor,
+        return render(request, 'sleep_statistic/sleep_history.html', context)
 
-    }
 
-    return render(request, 'sleep_statistic/sleep_statistics_show.html', context)
+def sleep_statistics_show(request: HttpRequest) -> HttpResponse:
+    return SleepStatisticsView.as_view()(request)
 
 
 @login_required
 @cache_page(60 * 15)
 def sleep_history(request: HttpRequest) -> HttpResponse:
-    user = request.user
-
-    page_size = int(request.GET.get('page_size', 7))
-
-    qs = SleepStatistics.get_delta_days_sleep_statistics(user)
-
-    paginator = CursorPaginator(qs, ordering=('-date', '-id'))
-
-    # Получаем курсоры из GET
-    after = request.GET.get('after')  # ссылка на следующий блок (страница вперёд)
-    before = request.GET.get('before')  # ссылка на предыдущий блок (страница назад)
-
-    if before:
-        # Если есть курсор before, то получаем предыдущую страницу
-        page = paginator.page(last=page_size, before=before)
-    else:
-        # Если курсора before нет, то получаем первую страницу
-        page = paginator.page(first=page_size, after=after)
-
-    next_cursor: Optional[str] = paginator.cursor(page[-1]) if page and page.has_next else None
-    prev_cursor: Optional[str] = paginator.cursor(page[0]) if page and page.has_previous else None
-
-    # Преобразуем в JSON для графика
-    graph_data_json = get_sleep_efficiency_trend(page)
-
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        # Если запрос AJAX, возвращаем только HTML таблицы и курсоры
-        return JsonResponse({
-
-            'has_next': page.has_next,
-            'has_previous': page.has_previous,
-            'next_cursor': next_cursor,
-            'prev_cursor': prev_cursor,
-            'graph_data_json': graph_data_json,
-        })
-
-    context = {
-
-        'has_next': page.has_next,
-        'has_previous': page.has_previous,
-        'next_cursor': next_cursor,
-        'prev_cursor': prev_cursor,
-        'graph_data_json': json.dumps(graph_data_json),
-        'page_size': page_size,
-
-    }
-
-    return render(request, 'sleep_statistic/sleep_history.html', context)
-
+    return SleepHistoryView.as_view()(request)
 
 @login_required
 def sleep_fragmentation(request: HttpRequest) -> HttpResponse:

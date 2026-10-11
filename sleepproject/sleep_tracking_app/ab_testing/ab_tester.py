@@ -1,16 +1,14 @@
 import os
 import json
 import re
-import time
 from dataclasses import dataclass
 from typing import List, Dict, Any, Optional
 from sleep_tracking_app.models import UserData, SleepStatistics, SleepRecord
-from sleep_tracking_app.prompts.prompts_templates import create_sleep_analysis_prompt
-from prompts.prompts_templates import get_system_prompt as get_baseline_system_prompt
-from sleep_tracking_app.prompts.baseline import call_gemini
-from sleep_tracking_app.rag.rag_service import RagService
+from sleep_tracking_app.prompts.prompts_templates import get_system_prompt as get_baseline_system_prompt
+from sleep_tracking_app.recommendations import RecommendationEngine
+from sleep_tracking_app.service_factory import create_recommendation_engine
 from sleep_tracking_app.ab_testing.judge import SleepLLMJudge
-from scenarios import get_test_scenarios_from_db  
+from sleep_tracking_app.ab_testing.scenarios import get_test_scenarios_from_db
 
 
 # --- ОПРЕДЕЛЕНИЕ ВАРИАНТОВ ПРОМПТОВ ---
@@ -60,7 +58,7 @@ def simple_quality_metrics(text: str) -> Dict[str, Any]:
     }
 
 
-def compose_overall_score(auto: Dict[str, Any], judge_scores: Optional[Dict[str, int]]) -> float:
+def compose_overall_score(auto: Dict[str, Any], judge_scores: dict[str, int] | None) -> float:
     """
     Итоговый скор A/B:
     - авто‑метрики (0–100)
@@ -104,8 +102,8 @@ class ABTestResult:
     system_prompt_preview: str
     response: str
     auto_metrics: Dict[str, Any]
-    judge_scores: Optional[Dict[str, Any]]
-    judge_critical_issues: Optional[List[str]]
+    judge_scores: dict[str, Any] | None
+    judge_critical_issues: list[str] | None
     overall_score: float
     gemini_latency: float
     rag_latency: float
@@ -114,11 +112,12 @@ class ABTestResult:
 # --- ОСНОВНОЙ КЛАСС ДЛЯ A/B-ТЕСТИРОВАНИЯ ---
 
 class SleepABOfflineTester:
-    def __init__(self, variants: List[str] = None, max_tests: int = 5):
+    def __init__(self, variants: List[str] = None, max_tests: int = 5,
+                 engine: RecommendationEngine | None = None):
         self.variants = variants or ["A", "B"]
         self.max_tests = max_tests
         self.judge = SleepLLMJudge()
-        self.rag_service = RagService()
+        self.engine = engine if engine is not None else create_recommendation_engine()
         self.results: List[ABTestResult] = []
 
         self.test_cases = get_test_scenarios_from_db()[:self.max_tests]
@@ -129,36 +128,16 @@ class SleepABOfflineTester:
         sleep_record: SleepRecord = case["sleep_record"]
 
         system_prompt = PROMPT_VARIANTS[variant]
-        
-        user_prompt = create_sleep_analysis_prompt(
-            user_data,
-            [sleep_stats],
-            [sleep_record],
+
+        result = self.engine.recommend(
+            user_data, [sleep_stats], [sleep_record], system_prompt=system_prompt,
         )
-        full_prompt = f"{system_prompt}\n\n{user_prompt}"
-
-        # 2) Gemini → базовая рекомендация
-        start_g = time.time()
-        gemini_resp = call_gemini(full_prompt)
-        gemini_lat = round(time.time() - start_g, 3)
-
-        if not gemini_resp:
-            print(f"[{variant}] Gemini не вернул ответ, пропускаем кейс {case['id']}")
+        if not result.text:
+            print(f"[{variant}] Модель не вернула ответ, пропускаем кейс {case['id']}")
             return None
-
-        # 3) RAG+Mistral → улучшение
-        user_ctx = {
-            "age_months": float(user_data.get_age_months()),
-            "gender": user_data.get_gender(),
-            "weight": float(user_data.weight),
-            "height": float(user_data.height),
-        }
-
-        start_r = time.time()
-        rag_result = self.rag_service.enhance(gemini_resp, user_ctx)
-        rag_lat = round(time.time() - start_r, 3)
-
-        final_text = rag_result.get("enhanced") or gemini_resp
+        final_text = result.text
+        gemini_lat = round(result.generation.latency_seconds, 3)
+        rag_lat = round(result.rag_latency_seconds, 3)
 
         # 4) авто‑метрики
         auto = simple_quality_metrics(final_text)

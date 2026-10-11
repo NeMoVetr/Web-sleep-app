@@ -1,15 +1,14 @@
 import time
 import os
-from typing import Optional, Dict, Any, List
+from typing import Any, List
 from dotenv import load_dotenv
 # LLM client
 from google import genai
 # Langfuse SDK
 
-from langfuse import get_client, observe
+from langfuse import observe
 
 from sleep_tracking_app.models import UserData, SleepStatistics, SleepRecord
-from .prompts_templates import create_sleep_analysis_prompt, get_system_prompt
 
 load_dotenv()
 
@@ -84,19 +83,20 @@ def get_sleep_recommendation(
         user_data: UserData,
         sleep_statistics: List[SleepStatistics],
         sleep_record: List[SleepRecord]
-) -> str:
+) -> str | None:
     """
     Основная функция для получения рекомендаций по сну
     """
-    system_prompt = get_system_prompt()
-    user_prompt = create_sleep_analysis_prompt(user_data, sleep_statistics, sleep_record)
-    full_prompt = f"{system_prompt}\n\n{user_prompt}"
+    from ..ai_clients import GeminiClient
+    from ..recommendations import DirectRecommendationEngine
 
-    result = call_gemini(full_prompt)
+    result = DirectRecommendationEngine(GeminiClient()).recommend(
+        user_data, sleep_statistics, sleep_record,
+    )
 
-    if not result:
+    if not result.text:
         print("Извините, я не смог обработать ваш запрос. Попробуйте позже.")
         return None
 
-    return result
+    return result.text
 
